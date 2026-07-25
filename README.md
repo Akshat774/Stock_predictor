@@ -1,0 +1,210 @@
+# 📈 Stock Price Predictor
+
+A professional, internship-level **Machine Learning application** that predicts the **next day's closing stock price** using historical market data from Yahoo Finance.
+
+Built with Python 3.12+, Streamlit, scikit-learn, and Plotly — featuring a beautifully designed dark-mode dashboard with 4 interactive pages.
+
+---
+
+## 🚀 Features
+
+- **Multi-model comparison**: Linear Regression vs Random Forest Regressor
+- **7 engineered features**: Open, High, Low, Volume, Prev_Close, MA5, MA10
+- **3 evaluation metrics**: MAE, RMSE, R² Score
+- **4 Streamlit pages**: Dashboard · Stock Analysis · Prediction · Model Performance
+- **Interactive charts**: Candlestick, Volume, Moving Averages, Actual vs Predicted, Prediction Gauge
+- **Modular architecture**: Clean, type-hinted, PEP-8 compliant code
+
+---
+
+## 📁 Project Structure
+
+```
+Stock_predictor/
+│
+├── app.py                  # Main Streamlit application (4 pages)
+├── train_models.py         # End-to-end model training script
+├── requirements.txt
+├── README.md
+│
+├── data/
+│   ├── raw/                # Downloaded CSVs from yfinance
+│   └── processed/          # Cleaned DataFrames
+│
+├── models/
+│   ├── linear_regression.pkl
+│   ├── random_forest.pkl
+│   └── metrics.json        # MAE, RMSE, R² for both models
+│
+├── src/
+│   ├── downloader.py       # yfinance data fetching
+│   ├── preprocess.py       # Data cleaning
+│   ├── feature_engineering.py  # Feature + target creation
+│   ├── trainer.py          # Model training + serialization
+│   ├── predictor.py        # Inference interface
+│   └── evaluator.py        # Metric computation + metrics.json
+│
+└── utils/
+    ├── metrics.py          # Reusable metric functions
+    └── plotting.py         # Reusable Plotly chart factory
+```
+
+---
+
+## ⚡ Quick Start
+
+### 1. Clone & Set Up Environment
+
+```bash
+git clone <your-repo-url>
+cd Stock_predictor
+
+# Create virtual environment
+python -m venv venv
+
+# Activate (Windows)
+venv\Scripts\activate
+
+# Activate (macOS/Linux)
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Train Models
+
+```bash
+python train_models.py
+```
+
+This will:
+- Download historical data for AAPL, MSFT, GOOGL, TSLA from Yahoo Finance
+- Clean and engineer features
+- Train Linear Regression and Random Forest models
+- Save `.pkl` files and `metrics.json` to `models/`
+
+> Training typically takes 1–3 minutes depending on your internet speed.
+
+### 4. Launch the Dashboard
+
+```bash
+streamlit run app.py
+```
+
+Open your browser to `http://localhost:8501`.
+
+---
+
+## 📊 Feature Engineering
+
+| Feature | Description | Type |
+|---------|-------------|------|
+| Open | Opening price of the day | OHLCV |
+| High | Highest price of the day | OHLCV |
+| Low | Lowest price of the day | OHLCV |
+| Volume | Number of shares traded | OHLCV |
+| Prev_Close | Previous day's close (Lag-1) | Lag |
+| MA5 | 5-day Simple Moving Average | Technical |
+| MA10 | 10-day Simple Moving Average | Technical |
+
+**Target**: Next day's closing price (`Close.shift(-1)`)
+
+---
+
+## 🤖 Models
+
+### Linear Regression
+- Baseline model with StandardScaler preprocessing
+- High interpretability
+- Assumes linear feature-target relationship
+
+### Random Forest Regressor
+- 200 decision trees, uses all CPU cores
+- Captures non-linear patterns
+- Generally more accurate for stock data
+
+Both models are wrapped in scikit-learn `Pipeline` objects for consistent API usage.
+
+---
+
+## 📐 Training Strategy
+
+- **Data split**: Chronological 80/20 (NO random shuffle — prevents data leakage in time series)
+- **Training set**: First 80% of data in chronological order
+- **Test set**: Last 20% of data
+- **Multi-ticker training**: Models are trained on combined data from AAPL, MSFT, GOOGL, TSLA for better generalization
+
+---
+
+## 📈 Dashboard Pages
+
+### 🏠 Dashboard
+- Live market snapshot for key stocks
+- Workflow overview
+- Model availability status
+- Feature engineering table
+
+### 📈 Stock Analysis
+- Historical closing price (area chart)
+- Trading volume (coloured bar chart)
+- MA5 & MA10 overlay
+- Interactive candlestick chart (adjustable date range)
+- Raw OHLCV data viewer
+
+### 🔮 Prediction
+- Select any stock ticker + model
+- Gauge chart showing predicted vs current close
+- Percentage change direction (Bullish/Bearish)
+- Recent price context with prediction annotation
+
+### 📊 Model Performance
+- Metrics comparison table (MAE, RMSE, R²)
+- Grouped bar chart comparison
+- Actual vs Predicted chart on test set
+- Per-ticker test metrics
+- Metric interpretation guide
+
+---
+
+## 🛠️ Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| Language | Python 3.12+ |
+| UI | Streamlit |
+| Data Source | yfinance (Yahoo Finance) |
+| Data Processing | pandas, numpy |
+| ML | scikit-learn |
+| Charts | Plotly |
+| Model Persistence | joblib |
+
+---
+
+## ⚠️ Disclaimer
+
+> This application is built for **educational purposes only**. Predictions generated by ML models should **NOT** be used as financial advice or to make real trading decisions. Past performance does not guarantee future results.
+
+---
+
+## 🔧 Customisation
+
+To add more tickers to training, edit `train_models.py`:
+
+```python
+TICKERS: list[str] = [
+    "AAPL", "MSFT", "GOOGL", "TSLA",
+    "TCS.NS", "RELIANCE.NS",  # Add Indian tickers
+]
+```
+
+Then re-run `python train_models.py`.
+
+---
+
+## 📄 License
+
+MIT License — free to use for educational and personal projects.

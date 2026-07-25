@@ -1,0 +1,360 @@
+"""
+utils/plotting.py
+-----------------
+Reusable, parameterized Plotly figure factory functions.
+All functions return plotly.graph_objects.Figure objects so they
+can be embedded directly in Streamlit with st.plotly_chart().
+"""
+
+from typing import Any
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+# ─── Shared colour palette ────────────────────────────────────────────────────
+PALETTE = {
+    "primary": "#6C63FF",       # Purple
+    "secondary": "#FF6584",     # Pink
+    "accent": "#43E97B",        # Green
+    "neutral": "#A8B2D8",       # Muted blue-grey
+    "bg_dark": "#0D1117",       # Dark background
+    "bg_card": "#161B22",       # Card background
+    "text": "#E6EDF3",          # Light text
+    "grid": "#21262D",          # Grid lines
+}
+
+_LAYOUT_DEFAULTS = dict(
+    plot_bgcolor=PALETTE["bg_dark"],
+    paper_bgcolor=PALETTE["bg_dark"],
+    font=dict(color=PALETTE["text"], family="Inter, sans-serif"),
+    margin=dict(l=40, r=20, t=50, b=40),
+    legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor=PALETTE["grid"]),
+    xaxis=dict(
+        gridcolor=PALETTE["grid"],
+        showgrid=True,
+        zeroline=False,
+        color=PALETTE["text"],
+    ),
+    yaxis=dict(
+        gridcolor=PALETTE["grid"],
+        showgrid=True,
+        zeroline=False,
+        color=PALETTE["text"],
+    ),
+)
+
+
+def _apply_dark_layout(fig: go.Figure, title: str = "") -> go.Figure:
+    """Apply the shared dark-theme layout to a figure."""
+    fig.update_layout(title=dict(text=title, font=dict(size=18)), **_LAYOUT_DEFAULTS)
+    return fig
+
+
+# ─── Historical Price ─────────────────────────────────────────────────────────
+
+def plot_historical_close(df: pd.DataFrame, ticker: str) -> go.Figure:
+    """
+    Plot historical closing price as a filled area chart.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        OHLCV DataFrame with DatetimeIndex.
+    ticker : str
+        Ticker symbol for the title.
+
+    Returns
+    -------
+    go.Figure
+    """
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df.index,
+        y=df["Close"],
+        name="Close",
+        line=dict(color=PALETTE["primary"], width=2),
+        fill="tozeroy",
+        fillcolor=f"rgba(108,99,255,0.10)",
+        hovertemplate="%{x|%Y-%m-%d}<br>Close: $%{y:.2f}<extra></extra>",
+    ))
+    return _apply_dark_layout(fig, f"{ticker} — Historical Closing Price")
+
+
+# ─── Volume Chart ─────────────────────────────────────────────────────────────
+
+def plot_volume(df: pd.DataFrame, ticker: str) -> go.Figure:
+    """
+    Plot trading volume as a bar chart coloured by direction (up/down).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    ticker : str
+
+    Returns
+    -------
+    go.Figure
+    """
+    direction = df["Close"].diff().fillna(0)
+    colors = [PALETTE["accent"] if d >= 0 else PALETTE["secondary"] for d in direction]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=df.index,
+        y=df["Volume"],
+        name="Volume",
+        marker_color=colors,
+        hovertemplate="%{x|%Y-%m-%d}<br>Volume: %{y:,.0f}<extra></extra>",
+    ))
+    return _apply_dark_layout(fig, f"{ticker} — Trading Volume")
+
+
+# ─── Moving Averages ──────────────────────────────────────────────────────────
+
+def plot_moving_averages(df: pd.DataFrame, ticker: str) -> go.Figure:
+    """
+    Plot Close price with MA5 and MA10 overlaid.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with Close, MA5, MA10 columns (or computed on the fly).
+    ticker : str
+
+    Returns
+    -------
+    go.Figure
+    """
+    plot_df = df.copy()
+    if "MA5" not in plot_df.columns:
+        plot_df["MA5"] = plot_df["Close"].rolling(5).mean()
+    if "MA10" not in plot_df.columns:
+        plot_df["MA10"] = plot_df["Close"].rolling(10).mean()
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=plot_df.index, y=plot_df["Close"],
+        name="Close",
+        line=dict(color=PALETTE["neutral"], width=1.5),
+        hovertemplate="%{x|%Y-%m-%d}<br>Close: $%{y:.2f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=plot_df.index, y=plot_df["MA5"],
+        name="MA5",
+        line=dict(color=PALETTE["accent"], width=1.8, dash="dot"),
+        hovertemplate="%{x|%Y-%m-%d}<br>MA5: $%{y:.2f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=plot_df.index, y=plot_df["MA10"],
+        name="MA10",
+        line=dict(color=PALETTE["secondary"], width=1.8, dash="dash"),
+        hovertemplate="%{x|%Y-%m-%d}<br>MA10: $%{y:.2f}<extra></extra>",
+    ))
+    return _apply_dark_layout(fig, f"{ticker} — Close with MA5 & MA10")
+
+
+# ─── Candlestick ──────────────────────────────────────────────────────────────
+
+def plot_candlestick(df: pd.DataFrame, ticker: str, last_n: int = 90) -> go.Figure:
+    """
+    Plot a candlestick chart for the last N trading days.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    ticker : str
+    last_n : int
+        Number of recent rows to display.
+
+    Returns
+    -------
+    go.Figure
+    """
+    subset = df.tail(last_n)
+    fig = go.Figure(data=[go.Candlestick(
+        x=subset.index,
+        open=subset["Open"],
+        high=subset["High"],
+        low=subset["Low"],
+        close=subset["Close"],
+        name=ticker,
+        increasing_line_color=PALETTE["accent"],
+        decreasing_line_color=PALETTE["secondary"],
+    )])
+    fig.update_layout(xaxis_rangeslider_visible=False)
+    return _apply_dark_layout(fig, f"{ticker} — Last {last_n} Days Candlestick")
+
+
+# ─── Actual vs Predicted ──────────────────────────────────────────────────────
+
+def plot_actual_vs_predicted(
+    y_test: pd.Series | np.ndarray,
+    y_pred_lr: np.ndarray,
+    y_pred_rf: np.ndarray,
+    dates: pd.DatetimeIndex | None = None,
+) -> go.Figure:
+    """
+    Plot actual vs. predicted closing prices for both models.
+
+    Parameters
+    ----------
+    y_test : array-like
+        Actual next-day close values.
+    y_pred_lr : np.ndarray
+        Linear Regression predictions.
+    y_pred_rf : np.ndarray
+        Random Forest predictions.
+    dates : pd.DatetimeIndex | None
+        Optional dates for the x-axis.
+
+    Returns
+    -------
+    go.Figure
+    """
+    x = dates if dates is not None else np.arange(len(y_test))
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=x, y=y_test,
+        name="Actual",
+        line=dict(color=PALETTE["neutral"], width=2),
+        hovertemplate="Actual: $%{y:.2f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=y_pred_lr,
+        name="Linear Regression",
+        line=dict(color=PALETTE["primary"], width=1.8, dash="dot"),
+        hovertemplate="LR Pred: $%{y:.2f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=y_pred_rf,
+        name="Random Forest",
+        line=dict(color=PALETTE["accent"], width=1.8, dash="dash"),
+        hovertemplate="RF Pred: $%{y:.2f}<extra></extra>",
+    ))
+    return _apply_dark_layout(fig, "Actual vs Predicted — Test Set")
+
+
+# ─── Metrics Radar / Bar ──────────────────────────────────────────────────────
+
+def plot_metrics_bar(metrics: dict[str, dict[str, float]]) -> go.Figure:
+    """
+    Grouped bar chart comparing MAE and RMSE for all models.
+
+    Parameters
+    ----------
+    metrics : dict[str, dict[str, float]]
+        {model_name: {"MAE": ..., "RMSE": ..., "R2": ...}}
+
+    Returns
+    -------
+    go.Figure
+    """
+    model_names = list(metrics.keys())
+    mae_vals = [metrics[m]["MAE"] for m in model_names]
+    rmse_vals = [metrics[m]["RMSE"] for m in model_names]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        name="MAE",
+        x=model_names,
+        y=mae_vals,
+        marker_color=PALETTE["primary"],
+        hovertemplate="%{x}<br>MAE: %{y:.4f}<extra></extra>",
+    ))
+    fig.add_trace(go.Bar(
+        name="RMSE",
+        x=model_names,
+        y=rmse_vals,
+        marker_color=PALETTE["secondary"],
+        hovertemplate="%{x}<br>RMSE: %{y:.4f}<extra></extra>",
+    ))
+    fig.update_layout(barmode="group")
+    return _apply_dark_layout(fig, "MAE & RMSE Comparison")
+
+
+def plot_r2_bar(metrics: dict[str, dict[str, float]]) -> go.Figure:
+    """
+    Bar chart of R² scores for each model.
+
+    Parameters
+    ----------
+    metrics : dict[str, dict[str, float]]
+
+    Returns
+    -------
+    go.Figure
+    """
+    model_names = list(metrics.keys())
+    r2_vals = [metrics[m]["R2"] for m in model_names]
+    colors = [PALETTE["accent"] if r >= 0 else PALETTE["secondary"] for r in r2_vals]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        name="R²",
+        x=model_names,
+        y=r2_vals,
+        marker_color=colors,
+        hovertemplate="%{x}<br>R²: %{y:.4f}<extra></extra>",
+    ))
+    fig.add_hline(y=1.0, line_dash="dot", line_color=PALETTE["neutral"], opacity=0.5)
+    return _apply_dark_layout(fig, "R² Score Comparison")
+
+
+def plot_prediction_gauge(
+    current: float,
+    predicted: float,
+    pct_change: float,
+    ticker: str,
+) -> go.Figure:
+    """
+    Gauge chart showing confidence/magnitude of the predicted move.
+
+    Parameters
+    ----------
+    current : float
+        Current closing price.
+    predicted : float
+        Model's predicted next close.
+    pct_change : float
+        Percentage change between current and predicted.
+    ticker : str
+
+    Returns
+    -------
+    go.Figure
+    """
+    color = PALETTE["accent"] if pct_change >= 0 else PALETTE["secondary"]
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number+delta",
+        value=predicted,
+        delta=dict(reference=current, valueformat=".2f"),
+        title=dict(text=f"{ticker} — Predicted Next Close", font=dict(size=16, color=PALETTE["text"])),
+        gauge=dict(
+            axis=dict(
+                range=[current * 0.90, current * 1.10],
+                tickcolor=PALETTE["text"],
+            ),
+            bar=dict(color=color),
+            bgcolor=PALETTE["bg_card"],
+            bordercolor=PALETTE["grid"],
+            steps=[
+                dict(range=[current * 0.90, current], color=f"rgba(255,101,132,0.1)"),
+                dict(range=[current, current * 1.10], color=f"rgba(67,233,123,0.1)"),
+            ],
+            threshold=dict(
+                line=dict(color=PALETTE["neutral"], width=2),
+                thickness=0.75,
+                value=current,
+            ),
+        ),
+        number=dict(prefix="$", valueformat=".2f", font=dict(color=PALETTE["text"])),
+    ))
+    fig.update_layout(
+        paper_bgcolor=PALETTE["bg_dark"],
+        font=dict(color=PALETTE["text"]),
+        margin=dict(l=40, r=40, t=60, b=20),
+    )
+    return fig
