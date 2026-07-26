@@ -51,10 +51,6 @@ def load_env_file():
 # Call load_env_file on module load
 load_env_file()
 
-# Model to use — gemini-2.0-flash is the recommended free-tier model
-# that supports the new google.genai SDK
-GEMINI_MODEL = "gemini-2.0-flash"
-
 
 def _build_prompt(
     ticker: str,
@@ -154,6 +150,7 @@ def generate_analysis(
     latest_features: dict[str, float],
     recent_prices: list[float] | None = None,
     api_key: str | None = None,
+    gemini_model_id: str = "gemini-1.5-flash",
 ) -> str:
     """
     Call Google Gemini API to generate a market analysis explanation.
@@ -200,9 +197,9 @@ def generate_analysis(
             recent_prices=recent_prices,
         )
 
-        logger.info("Calling Gemini API (%s) for %s analysis...", GEMINI_MODEL, ticker)
+        logger.info("Calling Gemini API (%s) for %s analysis...", gemini_model_id, ticker)
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=gemini_model_id,
             contents=prompt,
         )
         analysis = response.text.strip() if response.text else ""
@@ -214,7 +211,7 @@ def generate_analysis(
         try:
             import google.generativeai as genai_legacy  # type: ignore
             genai_legacy.configure(api_key=key)
-            model_obj = genai_legacy.GenerativeModel("gemini-1.5-flash")
+            model_obj = genai_legacy.GenerativeModel(gemini_model_id)
             prompt = _build_prompt(
                 ticker=ticker,
                 model_name=model_name,
@@ -248,7 +245,7 @@ def generate_analysis(
         if "404" in error_msg or "not found" in error_msg.lower():
             return (
                 "**Gemini model not available.**\n\n"
-                f"Model `{GEMINI_MODEL}` may not be available on your API key's region. "
+                f"Model `{gemini_model_id}` may not be available on your API key's region. "
                 "Try a different model or check your API key permissions."
             )
         return f"**Gemini API error:** {error_msg}"
@@ -273,7 +270,7 @@ def validate_api_key(api_key: str) -> bool:
         from google import genai
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model="gemini-1.5-flash",
             contents="Say OK in one word.",
         )
         return bool(response.text)

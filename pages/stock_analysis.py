@@ -20,10 +20,7 @@ from pages._shared import (
     DEFAULT_START,
 )
 from utils.plotting import (
-    plot_historical_close,
-    plot_volume,
-    plot_moving_averages,
-    plot_candlestick,
+    plot_advanced_chart,
 )
 
 # ── Apply shared theme & sidebar ──────────────────────────────────────────────
@@ -115,46 +112,21 @@ with s6:
 
 st.divider()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CHARTS (TABBED)
-# ─────────────────────────────────────────────────────────────────────────────
-tab_price, tab_vol, tab_ma, tab_candle = st.tabs(
-    ["📉 Price History", "📊 Volume", "〰️ Moving Averages", "🕯️ Candlestick"]
+st.markdown(
+    '<p style="color:#8B949E;font-size:0.85rem;margin-bottom:10px;">'
+    'Interactive advanced chart with Candlesticks, Volume, and Moving Averages.</p>',
+    unsafe_allow_html=True,
 )
 
-with tab_price:
-    st.markdown(
-        f'<p style="color:#8B949E;font-size:0.83rem;margin-bottom:4px;">'
-        f'Area chart of daily closing price for <strong>{ticker}</strong>.</p>',
-        unsafe_allow_html=True,
-    )
-    st.plotly_chart(plot_historical_close(df, ticker), use_container_width=True)
+last_n = st.slider(
+    "Zoom: Number of recent trading days to display",
+    min_value=30,
+    max_value=min(365, len(df)),
+    value=min(150, len(df)),
+    key="candle_n",
+)
 
-with tab_vol:
-    st.markdown(
-        '<p style="color:#8B949E;font-size:0.83rem;margin-bottom:4px;">'
-        'Green bars = price up · Red bars = price down.</p>',
-        unsafe_allow_html=True,
-    )
-    st.plotly_chart(plot_volume(df, ticker), use_container_width=True)
-
-with tab_ma:
-    st.markdown(
-        '<p style="color:#8B949E;font-size:0.83rem;margin-bottom:4px;">'
-        'Close price with 5-day and 10-day Simple Moving Averages overlaid.</p>',
-        unsafe_allow_html=True,
-    )
-    st.plotly_chart(plot_moving_averages(df, ticker), use_container_width=True)
-
-with tab_candle:
-    last_n = st.slider(
-        "Number of recent trading days to display",
-        min_value=30,
-        max_value=min(365, len(df)),
-        value=min(90, len(df)),
-        key="candle_n",
-    )
-    st.plotly_chart(plot_candlestick(df, ticker, last_n=last_n), use_container_width=True)
+st.plotly_chart(plot_advanced_chart(df, ticker, last_n=last_n), use_container_width=True)
 
 st.divider()
 

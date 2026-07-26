@@ -32,17 +32,20 @@ _LAYOUT_DEFAULTS = dict(
     margin=dict(l=40, r=20, t=50, b=40),
     legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor=PALETTE["grid"]),
     xaxis=dict(
-        gridcolor=PALETTE["grid"],
+        gridcolor="rgba(33,38,45,0.5)",
         showgrid=True,
         zeroline=False,
         color=PALETTE["text"],
+        showline=False,
     ),
     yaxis=dict(
-        gridcolor=PALETTE["grid"],
+        gridcolor="rgba(33,38,45,0.5)",
         showgrid=True,
         zeroline=False,
         color=PALETTE["text"],
+        showline=False,
     ),
+    hovermode="x unified",
 )
 
 
@@ -155,36 +158,92 @@ def plot_moving_averages(df: pd.DataFrame, ticker: str) -> go.Figure:
     return _apply_dark_layout(fig, f"{ticker} — Close with MA5 & MA10")
 
 
-# ─── Candlestick ──────────────────────────────────────────────────────────────
+# ─── Advanced Combined Chart ──────────────────────────────────────────────────
 
-def plot_candlestick(df: pd.DataFrame, ticker: str, last_n: int = 90) -> go.Figure:
+def plot_advanced_chart(df: pd.DataFrame, ticker: str, last_n: int = 150) -> go.Figure:
     """
-    Plot a candlestick chart for the last N trading days.
+    Plot a professional combined chart:
+      - Candlesticks for price
+      - MA5 and MA10 overlays
+      - Volume on a secondary Y-axis at the bottom
 
     Parameters
     ----------
     df : pd.DataFrame
     ticker : str
     last_n : int
-        Number of recent rows to display.
-
-    Returns
-    -------
-    go.Figure
+        Number of recent rows to display to avoid clutter.
     """
-    subset = df.tail(last_n)
-    fig = go.Figure(data=[go.Candlestick(
-        x=subset.index,
-        open=subset["Open"],
-        high=subset["High"],
-        low=subset["Low"],
-        close=subset["Close"],
-        name=ticker,
-        increasing_line_color=PALETTE["accent"],
-        decreasing_line_color=PALETTE["secondary"],
-    )])
-    fig.update_layout(xaxis_rangeslider_visible=False)
-    return _apply_dark_layout(fig, f"{ticker} — Last {last_n} Days Candlestick")
+    subset = df.tail(last_n).copy()
+    if "MA5" not in subset.columns:
+        subset["MA5"] = subset["Close"].rolling(5).mean()
+    if "MA10" not in subset.columns:
+        subset["MA10"] = subset["Close"].rolling(10).mean()
+
+    # Create subplots with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    
+    # 1. Volume Bar Chart (Secondary Y, drawn first so it's behind price)
+    direction = subset["Close"].diff().fillna(0)
+    vol_colors = ["rgba(67, 233, 123, 0.3)" if d >= 0 else "rgba(255, 101, 132, 0.3)" for d in direction]
+    
+    fig.add_trace(
+        go.Bar(
+            x=subset.index,
+            y=subset["Volume"],
+            name="Volume",
+            marker_color=vol_colors,
+            hovertemplate="Volume: %{y:,.0f}<extra></extra>",
+        ),
+        secondary_y=True,
+    )
+
+    # 2. Candlestick
+    fig.add_trace(
+        go.Candlestick(
+            x=subset.index,
+            open=subset["Open"],
+            high=subset["High"],
+            low=subset["Low"],
+            close=subset["Close"],
+            name="Price",
+            increasing_line_color=PALETTE["accent"],
+            decreasing_line_color=PALETTE["secondary"],
+        ),
+        secondary_y=False,
+    )
+
+    # 3. Moving Averages
+    fig.add_trace(
+        go.Scatter(
+            x=subset.index, y=subset["MA5"],
+            name="MA5",
+            line=dict(color="#FFB86C", width=1.5, dash="dot"),
+            hoverinfo="skip"
+        ),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=subset.index, y=subset["MA10"],
+            name="MA10",
+            line=dict(color="#8BE9FD", width=1.5, dash="dash"),
+            hoverinfo="skip"
+        ),
+        secondary_y=False,
+    )
+
+    fig.update_layout(
+        xaxis_rangeslider_visible=False,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    
+    # Adjust axes
+    # Volume scale should be small (bottom 20%)
+    fig.update_yaxes(title_text="Price ($)", secondary_y=False)
+    fig.update_yaxes(showgrid=False, secondary_y=True, range=[0, subset["Volume"].max() * 5], showticklabels=False)
+
+    return _apply_dark_layout(fig, f"{ticker} — Interactive Advanced Chart")
 
 
 # ─── Actual vs Predicted ──────────────────────────────────────────────────────

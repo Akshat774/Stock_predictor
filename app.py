@@ -41,20 +41,12 @@ st.set_page_config(
 )
 
 # ── Page registry (st.navigation — Streamlit ≥ 1.36) ─────────────────────────
-pages = st.navigation(
-    {
-        "Main": [
-            st.Page("pages/dashboard.py",        title="Dashboard",        icon="🏠", default=True),
-        ],
-        "Analysis": [
-            st.Page("pages/stock_analysis.py",   title="Stock Analysis",   icon="📈"),
-            st.Page("pages/model_performance.py", title="Model Performance", icon="📊"),
-        ],
-        "Prediction": [
-            st.Page("pages/prediction.py",       title="Prediction",       icon="🔮"),
-        ],
-    }
-)
+pages = st.navigation([
+    st.Page("pages/dashboard.py",        title="Dashboard",        icon="🏠", default=True),
+    st.Page("pages/stock_analysis.py",   title="Stock Analysis",   icon="📈"),
+    st.Page("pages/model_performance.py", title="Model Performance", icon="📊"),
+    st.Page("pages/prediction.py",       title="Prediction",       icon="🔮"),
+])
 
 # ── Run the selected page ─────────────────────────────────────────────────────
 pages.run()

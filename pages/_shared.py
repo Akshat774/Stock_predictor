@@ -16,6 +16,7 @@ for all cross-page configuration, keeping pages DRY and consistent.
 import datetime
 import sys
 import os
+import requests
 from pathlib import Path
 
 import pandas as pd
@@ -270,9 +271,26 @@ def render_sidebar_footer() -> None:
                 value=st.session_state.get("gemini_api_key", ""),
                 help="Get a free key from Google AI Studio",
             )
+            
+            # Gemini Model selection
+            model_opts = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-8b"]
+            current_mod = st.session_state.get("gemini_model", "gemini-1.5-flash") # Defaulting to 1.5-flash as it's more stable for quotas
+            if current_mod not in model_opts:
+                current_mod = "gemini-1.5-flash"
+                
+            selected_model = st.selectbox(
+                "Select Model",
+                options=model_opts,
+                index=model_opts.index(current_mod),
+                help="Switch models if you hit rate limits."
+            )
+            
             if api_key_input:
                 st.session_state["gemini_api_key"] = api_key_input
-                # Clear session state analysis so it regenerates on key change
+                
+            if selected_model != st.session_state.get("gemini_model"):
+                st.session_state["gemini_model"] = selected_model
+                # Clear session state analysis so it regenerates on key/model change
                 if "analysis_cache" in st.session_state:
                     del st.session_state["analysis_cache"]
 
@@ -281,7 +299,7 @@ def render_sidebar_footer() -> None:
             '<div style="color:#8B949E; font-size:0.70rem; text-align:center;">'
             "Data · Yahoo Finance & SQLite<br>"
             "Models · scikit-learn<br>"
-            "AI · Gemini 2.0 Flash<br>"
+            f"AI · {st.session_state.get('gemini_model', 'gemini-1.5-flash')}<br>"
             "Charts · Plotly<br><br>"
             f'<em>{datetime.datetime.now().strftime("%d %b %Y · %H:%M")}</em>'
             "</div>",
@@ -289,9 +307,24 @@ def render_sidebar_footer() -> None:
         )
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def search_ticker_keyword(query: str) -> list[dict]:
+    """Search for a stock ticker by company name or keyword using Yahoo Finance."""
+    if not query:
+        return []
+    try:
+        res = requests.get(
+            f"https://query2.finance.yahoo.com/v1/finance/search?q={query}&quotesCount=6",
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        )
+        data = res.json()
+        return [q for q in data.get("quotes", []) if q.get("quoteType") in ["EQUITY", "CRYPTOCURRENCY", "ETF"]]
+    except Exception:
+        return []
+
 def render_ticker_input(key_prefix: str = "") -> str:
     """
-    Renders a unified search input for any ticker and validates it.
+    Renders a unified search input that looks up tickers by company name.
 
     Parameters
     ----------
@@ -303,44 +336,43 @@ def render_ticker_input(key_prefix: str = "") -> str:
     str
         Validated uppercase ticker symbol, or empty string if invalid/empty.
     """
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        raw_ticker = st.text_input(
-            "Search Ticker Symbol (e.g. AAPL, NVDA, TCS.NS, BTC-USD)",
-            value="AAPL",
-            key=f"{key_prefix}_ticker_search",
-        ).strip().upper()
+    query = st.text_input(
+        "🔍 Search Company or Ticker (e.g. Apple, NVDA, TCS)",
+        value=st.session_state.get(f"{key_prefix}_last_query", "Apple"),
+        key=f"{key_prefix}_ticker_search",
+    ).strip()
     
-    with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        validate_btn = st.button("Validate Ticker", key=f"{key_prefix}_validate_btn")
+    st.session_state[f"{key_prefix}_last_query"] = query
 
-    if validate_btn:
-        if not raw_ticker:
-            st.error("Please enter a ticker symbol.")
-            return ""
-        with st.spinner(f"Validating {raw_ticker} on Yahoo Finance..."):
-            if validate_ticker(raw_ticker):
-                st.success(f"✓ '{raw_ticker}' is valid!")
-                # Add to session state of valid tickers to avoid re-validating
-                st.session_state[f"valid_{raw_ticker}"] = True
-            else:
-                st.error(f"✗ Ticker '{raw_ticker}' not found on Yahoo Finance. Try standard symbols.")
-                if f"valid_{raw_ticker}" in st.session_state:
-                    del st.session_state[f"valid_{raw_ticker}"]
-                return ""
+    if not query:
+        return ""
 
-    # Check if already validated in session state
-    if raw_ticker and not st.session_state.get(f"valid_{raw_ticker}", False):
-        # Silently validate if not yet validated
-        with st.spinner(f"Validating {raw_ticker}..."):
-            if validate_ticker(raw_ticker):
-                st.session_state[f"valid_{raw_ticker}"] = True
-            else:
-                st.warning(f"Ticker '{raw_ticker}' validation pending or failed. Click 'Validate Ticker' if correct.")
-                return raw_ticker
+    with st.spinner("Searching tickers..."):
+        results = search_ticker_keyword(query)
 
-    return raw_ticker
+    if not results:
+        # Fallback to direct ticker if search fails
+        st.warning(f"No results found for '{query}'. Using as exact ticker.")
+        return query.upper()
+
+    options = []
+    symbol_map = {}
+    
+    for r in results:
+        sym = r.get("symbol")
+        name = r.get("shortname", sym)
+        exch = r.get("exchDisp", "")
+        label = f"{sym} — {name} ({exch})" if exch else f"{sym} — {name}"
+        options.append(label)
+        symbol_map[label] = sym
+
+    selected_label = st.selectbox(
+        "Select matching asset:",
+        options=options,
+        key=f"{key_prefix}_ticker_select"
+    )
+    
+    return symbol_map.get(selected_label, query.upper())
 
 
 # ─── Cached data helpers ──────────────────────────────────────────────────────
