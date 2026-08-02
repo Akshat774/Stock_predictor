@@ -273,10 +273,10 @@ def render_sidebar_footer() -> None:
             )
             
             # Gemini Model selection
-            model_opts = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-8b"]
-            current_mod = st.session_state.get("gemini_model", "gemini-1.5-flash") # Defaulting to 1.5-flash as it's more stable for quotas
+            model_opts = ["gemini-flash-latest", "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-2.0-flash"]
+            current_mod = st.session_state.get("gemini_model", "gemini-flash-latest")
             if current_mod not in model_opts:
-                current_mod = "gemini-1.5-flash"
+                current_mod = "gemini-flash-latest"
                 
             selected_model = st.selectbox(
                 "Select Model",
@@ -299,7 +299,7 @@ def render_sidebar_footer() -> None:
             '<div style="color:#8B949E; font-size:0.70rem; text-align:center;">'
             "Data · Yahoo Finance & SQLite<br>"
             "Models · scikit-learn<br>"
-            f"AI · {st.session_state.get('gemini_model', 'gemini-1.5-flash')}<br>"
+            f"AI · {st.session_state.get('gemini_model', 'gemini-flash-latest')}<br>"
             "Charts · Plotly<br><br>"
             f'<em>{datetime.datetime.now().strftime("%d %b %Y · %H:%M")}</em>'
             "</div>",

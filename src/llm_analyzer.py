@@ -150,7 +150,7 @@ def generate_analysis(
     latest_features: dict[str, float],
     recent_prices: list[float] | None = None,
     api_key: str | None = None,
-    gemini_model_id: str = "gemini-1.5-flash",
+    gemini_model_id: str = "gemini-flash-latest",
 ) -> str:
     """
     Call Google Gemini API to generate a market analysis explanation.

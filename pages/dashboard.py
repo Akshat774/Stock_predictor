@@ -16,6 +16,7 @@ import streamlit as st
 from pages._shared import (
     inject_css,
     render_sidebar_footer,
+    render_ticker_input,
     cached_download,
     SUPPORTED_TICKERS,
     DEFAULT_TICKER,
@@ -88,9 +89,8 @@ with left_col:
             except Exception:
                 st.metric(ticker, "N/A")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### 🔍 Quick Live Ticker Search")
-    q_ticker = st.text_input("Enter any ticker (e.g. NVDA, TCS.NS, BTC-USD):", value="", key="dash_quick_search").strip().upper()
+    st.markdown("##### 🔍 Quick Live Search (Company Name or Ticker)")
+    q_ticker = render_ticker_input("dash")
     
     @st.fragment(run_every=10)
     def render_live_quote_block(ticker: str):

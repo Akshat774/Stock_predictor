@@ -232,7 +232,7 @@ if result and result["ticker"] == ticker and result["model_name"] == model_choic
                     latest_features=result["latest_features"],
                     recent_prices=result["recent_prices"],
                     api_key=api_key,
-                    gemini_model_id=st.session_state.get("gemini_model", "gemini-1.5-flash")
+                    gemini_model_id=st.session_state.get("gemini_model", "gemini-flash-latest")
                 )
                 st.session_state["analysis_cache"] = analysis_text
         
