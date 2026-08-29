@@ -34,12 +34,14 @@ render_sidebar_footer()
 # HERO
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="hero-banner" style="padding:26px 40px;">
-    <div class="hero-title" style="font-size:2rem;">🔮 Next-Day Prediction</div>
-    <p class="hero-subtitle">
-        Enter any Yahoo Finance ticker symbol and select a trained model to forecast tomorrow's closing price.
-        Features persistent caching via SQLite to prevent API rate limits.
-    </p>
+<div class="hero-banner">
+    <div class="hero-icon-badge">🔮</div>
+    <div>
+        <div class="hero-title">Next-Day Prediction</div>
+        <p class="hero-subtitle">
+            Enter any stock ticker and select a trained ML model to forecast tomorrow's closing price with SQLite caching and Gemini AI market insights.
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 

@@ -31,12 +31,14 @@ render_sidebar_footer()
 # HERO
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="hero-banner" style="padding:26px 40px;">
-    <div class="hero-title" style="font-size:2rem;">📈 Stock Analysis</div>
-    <p class="hero-subtitle">
-        Explore historical price data, volume trends, and technical moving averages
-        for any supported ticker.
-    </p>
+<div class="hero-banner">
+    <div class="hero-icon-badge">📊</div>
+    <div>
+        <div class="hero-title">Stock Analysis</div>
+        <p class="hero-subtitle">
+            Explore interactive candlestick charts, volume trends, and moving average overlays for any stock ticker.
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 

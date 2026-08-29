@@ -97,10 +97,31 @@ html, body, [class*="css"] {
     background: var(--bg-card) !important;
     border: 1px solid var(--border) !important;
     border-radius: var(--radius) !important;
-    padding: 16px 20px !important;
+    padding: 14px 16px !important;
+    height: 100% !important;
+    min-height: 110px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
 }
-[data-testid="stMetricLabel"] { color: var(--text-muted) !important; font-size: 0.75rem !important; }
-[data-testid="stMetricValue"] { color: var(--text) !important; font-size: 1.55rem !important; font-weight: 600 !important; }
+[data-testid="stMetricLabel"] {
+    color: var(--text-muted) !important;
+    font-size: 0.74rem !important;
+    white-space: nowrap !important;
+}
+[data-testid="stMetricValue"] {
+    color: var(--text) !important;
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    line-height: 1.25 !important;
+}
+[data-testid="stMetricValue"] > div {
+    white-space: normal !important;
+    text-overflow: unset !important;
+    overflow: visible !important;
+}
 
 /* ── Buttons ── */
 .stButton > button {
@@ -140,31 +161,57 @@ html, body, [class*="css"] {
 
 /* ── Hero banner ── */
 .hero-banner {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 45%, #0f3460 100%);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 36px 48px;
-    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #131824 0%, #0F172A 50%, #1A173B 100%);
+    border: 1px solid rgba(108, 99, 255, 0.28);
+    border-radius: 18px;
+    padding: 24px 32px;
+    margin-bottom: 24px;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 .hero-banner::before {
     content: '';
     position: absolute;
-    top: -40%; right: -15%;
-    width: 460px; height: 460px;
-    background: radial-gradient(circle, rgba(108,99,255,0.14) 0%, transparent 70%);
+    top: -40%;
+    right: -10%;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(108, 99, 255, 0.18) 0%, rgba(67, 233, 123, 0.05) 50%, transparent 70%);
     border-radius: 50%;
+    pointer-events: none;
+}
+.hero-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.22), rgba(67, 233, 123, 0.15));
+    border: 1px solid rgba(108, 99, 255, 0.40);
+    font-size: 1.75rem;
+    margin-right: 20px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(108, 99, 255, 0.25);
 }
 .hero-title {
-    font-size: 2.6rem; font-weight: 700;
-    background: linear-gradient(135deg, #fff 0%, var(--primary) 55%, var(--accent) 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    margin: 0 0 8px 0;
+    font-size: 2.1rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 50%, #A5B4FC 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.4px;
 }
 .hero-subtitle {
-    font-size: 1rem; color: var(--neutral);
-    margin: 0; max-width: 580px; line-height: 1.65;
+    font-size: 0.94rem;
+    color: #94A3B8;
+    margin: 0;
+    max-width: 680px;
+    line-height: 1.55;
 }
 
 /* ── Badges ── */
@@ -236,7 +283,7 @@ def render_sidebar_footer() -> None:
         for name, path in MODEL_REGISTRY.items():
             ok = path.exists()
             badge = "badge-green" if ok else "badge-red"
-            label = "✓ Ready" if ok else "✗ Missing"
+            label = "● Ready" if ok else "● Missing"
             st.markdown(
                 f'<span class="badge {badge}">{name}: {label}</span>',
                 unsafe_allow_html=True,

@@ -253,6 +253,8 @@ def plot_actual_vs_predicted(
     y_pred_lr: np.ndarray,
     y_pred_rf: np.ndarray,
     dates: pd.DatetimeIndex | None = None,
+    title: str = "Actual vs Predicted — Test Set",
+    show_markers: bool | None = None,
 ) -> go.Figure:
     """
     Plot actual vs. predicted closing prices for both models.
@@ -267,33 +269,61 @@ def plot_actual_vs_predicted(
         Random Forest predictions.
     dates : pd.DatetimeIndex | None
         Optional dates for the x-axis.
+    title : str
+        Chart title.
+    show_markers : bool | None
+        Explicitly force or disable scatter markers on lines.
 
     Returns
     -------
     go.Figure
     """
     x = dates if dates is not None else np.arange(len(y_test))
+    use_markers = show_markers if show_markers is not None else (len(y_test) <= 80)
+    trace_mode = "lines+markers" if use_markers else "lines"
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=x, y=y_test,
         name="Actual",
-        line=dict(color=PALETTE["neutral"], width=2),
-        hovertemplate="Actual: $%{y:.2f}<extra></extra>",
+        mode=trace_mode,
+        marker=dict(size=6, color="#FFFFFF"),
+        line=dict(color="#FFFFFF", width=2.5),
+        hovertemplate="<b>Actual</b>: $%{y:.2f}<extra></extra>",
     ))
     fig.add_trace(go.Scatter(
         x=x, y=y_pred_lr,
         name="Linear Regression",
-        line=dict(color=PALETTE["primary"], width=1.8, dash="dot"),
-        hovertemplate="LR Pred: $%{y:.2f}<extra></extra>",
+        mode=trace_mode,
+        marker=dict(size=6, color="#FF9F43"),
+        line=dict(color="#FF9F43", width=2, dash="dot"),
+        hovertemplate="<b>LR Pred</b>: $%{y:.2f}<extra></extra>",
     ))
     fig.add_trace(go.Scatter(
         x=x, y=y_pred_rf,
         name="Random Forest",
-        line=dict(color=PALETTE["accent"], width=1.8, dash="dash"),
-        hovertemplate="RF Pred: $%{y:.2f}<extra></extra>",
+        mode=trace_mode,
+        marker=dict(size=6, color=PALETTE["accent"]),
+        line=dict(color=PALETTE["accent"], width=2, dash="dash"),
+        hovertemplate="<b>RF Pred</b>: $%{y:.2f}<extra></extra>",
     ))
-    return _apply_dark_layout(fig, "Actual vs Predicted — Test Set")
+
+    # Add quick range selector buttons on x-axis
+    fig.update_xaxes(
+        rangeselector=dict(
+            buttons=list([
+                dict(count=1, label="1M", step="month", stepmode="backward"),
+                dict(count=3, label="3M", step="month", stepmode="backward"),
+                dict(count=6, label="6M", step="month", stepmode="backward"),
+                dict(count=1, label="1Y", step="year", stepmode="backward"),
+                dict(step="all", label="ALL"),
+            ]),
+            bgcolor="#161B22",
+            activecolor="#6C63FF",
+            font=dict(color="#E6EDF3", size=11),
+        )
+    )
+    return _apply_dark_layout(fig, title)
 
 
 # ─── Metrics Radar / Bar ──────────────────────────────────────────────────────

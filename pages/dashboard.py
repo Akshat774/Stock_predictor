@@ -34,19 +34,22 @@ render_sidebar_footer()
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero-banner">
-    <div class="hero-title">📈 Stock Price Predictor</div>
-    <p class="hero-subtitle">
-        A professional ML platform that forecasts the
-        <strong>next trading day's closing price</strong> using historical
-        market data, Linear Regression, and Random Forest models.
-    </p>
+    <div class="hero-icon-badge">📈</div>
+    <div>
+        <div class="hero-title">Stock Price Predictor</div>
+        <p class="hero-subtitle">
+            A professional ML platform that forecasts the
+            <strong style="color:#6C63FF;">next trading day's closing price</strong> using historical
+            market data, Linear Regression, and Random Forest models.
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # QUICK-STAT TILES
 # ─────────────────────────────────────────────────────────────────────────────
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5)
 all_ready = models_exist()
 
 with c1:
@@ -54,9 +57,11 @@ with c1:
 with c2:
     st.metric("Input Features", "7", help="Open, High, Low, Volume, Prev_Close, MA5, MA10")
 with c3:
-    st.metric("Data Source", "Yahoo Finance", help="Free via yfinance · No API key needed")
+    st.metric("Available Stocks", "All Global Stocks", help="Any stock worldwide supported via Yahoo Finance (US, NSE, BSE, etc.)")
 with c4:
-    st.metric("Model Status", "✅ Ready" if all_ready else "⚠️ Not Trained")
+    st.metric("Data Source", "Yahoo Finance", help="Free via yfinance · No API key needed")
+with c5:
+    st.metric("Model Status", "🟢 Ready" if all_ready else "🔴 Not Trained")
 
 st.divider()
 
@@ -179,18 +184,19 @@ steps = [
     ("🔮", "Predict",   "Next close"),
 ]
 
-step_cols = st.columns(len(steps))
-for col, (icon, title, desc) in zip(step_cols, steps):
-    with col:
-        st.markdown(
-            f'<div style="text-align:center;padding:14px 6px;'
-            f'background:#161B22;border:1px solid #30363D;border-radius:12px;">'
-            f'<div style="font-size:1.5rem;">{icon}</div>'
-            f'<div style="font-weight:600;font-size:0.86rem;color:#E6EDF3;margin:5px 0 2px;">{title}</div>'
-            f'<div style="font-size:0.70rem;color:#8B949E;">{desc}</div>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+workflow_html = '<div style="display: flex; align-items: center; justify-content: space-between; overflow-x: auto; padding: 10px 0; gap: 8px;">'
+for i, (icon, title, desc) in enumerate(steps):
+    workflow_html += f"""
+        <div style="flex: 1; text-align: center; padding: 14px 6px; background: #161B22; border: 1px solid #30363D; border-radius: 12px; min-width: 110px;">
+            <div style="font-size: 1.5rem;">{icon}</div>
+            <div style="font-weight: 600; font-size: 0.86rem; color: #E6EDF3; margin: 5px 0 2px;">{title}</div>
+            <div style="font-size: 0.70rem; color: #8B949E;">{desc}</div>
+        </div>
+    """
+    if i < len(steps) - 1:
+        workflow_html += '<div style="color: #6C63FF; font-size: 1.2rem; font-weight: bold;">→</div>'
+workflow_html += '</div>'
+st.markdown(workflow_html, unsafe_allow_html=True)
 
 st.divider()
 
@@ -212,18 +218,9 @@ feature_df = pd.DataFrame({
         "10-day Simple Moving Average of Close",
     ],
     "Category": ["OHLCV", "OHLCV", "OHLCV", "OHLCV", "Lag", "Technical", "Technical"],
-    "Target": ["—", "—", "—", "—", "—", "—", "—"],
 })
 
 st.dataframe(feature_df, use_container_width=True, hide_index=True)
-
-st.markdown("""
-<div style="margin-top:10px; color:#8B949E; font-size:0.80rem;">
-    <strong style="color:#6C63FF;">Target variable</strong>:
-    <code>Next day's Close</code> — computed as <code>Close.shift(-1)</code>.
-    The last row of any dataset is dropped because its target is unknown.
-</div>
-""", unsafe_allow_html=True)
 
 st.divider()
 
@@ -234,24 +231,78 @@ st.markdown('<div class="section-header"><h2>🛠️ Tech Stack</h2></div>',
             unsafe_allow_html=True)
 
 stack = [
-    ("🐍", "Python 3.12+", "Core language"),
-    ("🌊", "Streamlit",    "Interactive dashboard"),
-    ("🦁", "yfinance",     "Market data"),
-    ("🐼", "pandas / numpy", "Data processing"),
-    ("🤖", "scikit-learn", "ML models"),
-    ("📉", "Plotly",       "Interactive charts"),
-    ("💾", "joblib",       "Model persistence"),
+    (
+        '''<svg width="32" height="32" viewBox="0 0 128 128">
+            <path fill="#3776AB" d="M63.2 0C30.4 0 32.5 13.9 32.5 13.9l.1 14.4h31.3v4.4H19.5S0 30.7 0 63.8c0 33.1 17.1 31.9 17.1 31.9h10.2v-14.3s-.6-17.1 16.8-17.1h28.8s16.2.3 16.2-15.9V16.2S91.6 0 63.2 0zm-17 9.8c2.8 0 5 2.3 5 5s-2.3 5-5 5-5-2.3-5-5 2.2-5 5-5z"/>
+            <path fill="#FFD43B" d="M64.8 128c32.8 0 30.7-13.9 30.7-13.9l-.1-14.4H64.1v-4.4h44.4s19.5 1.9 19.5-31.2c0-33.1-17.1-31.9-17.1-31.9h-10.2v14.3s.6 17.1-16.8 17.1H55.1s-16.2-.3-16.2 15.9v32.2s-2.5 16.3 25.9 16.3zm17-9.8c-2.8 0-5-2.3-5-5s2.3-5 5-5 5 2.3 5 5-2.2 5-5 5z"/>
+        </svg>''',
+        "Python 3.12+",
+        "Core Engine & Logic",
+    ),
+    (
+        '''<svg width="32" height="32" viewBox="0 0 128 128">
+            <path fill="#FF4B4B" d="M64 16l42 64H22L64 16zm46 64H18c-7 0-11 7.6-7.5 13.5l19 32.5c3.5 6 12 6 15.5 0l19-30.5 19 30.5c3.5 6 12 6 15.5 0l19-32.5c3.5-5.9-.5-13.5-7.5-13.5z"/>
+        </svg>''',
+        "Streamlit",
+        "Reactive Dashboard UI",
+    ),
+    (
+        '''<svg width="32" height="32" viewBox="0 0 128 128">
+            <rect width="128" height="128" rx="28" fill="#6001D2"/>
+            <path fill="#FFFFFF" d="M42 32l16 32v34h12V64l16-32H72L64 52 56 32H42zm46 44a8 8 0 100 16 8 8 0 000-16z"/>
+        </svg>''',
+        "yfinance",
+        "Live Market Data API",
+    ),
+    (
+        '''<svg width="32" height="32" viewBox="0 0 128 128">
+            <rect x="14" y="24" width="26" height="80" rx="6" fill="#38BDF8"/>
+            <rect x="51" y="44" width="26" height="60" rx="6" fill="#FFD43B"/>
+            <rect x="88" y="16" width="26" height="88" rx="6" fill="#FF6584"/>
+        </svg>''',
+        "pandas / numpy",
+        "Feature Engineering",
+    ),
+    (
+        '''<svg width="32" height="32" viewBox="0 0 128 128">
+            <circle cx="48" cy="64" r="36" fill="#3499CD"/>
+            <circle cx="80" cy="64" r="36" fill="#F89939" opacity="0.9"/>
+            <text x="64" y="70" fill="#FFFFFF" font-size="18" font-family="Inter, sans-serif" font-weight="bold" text-anchor="middle">ML</text>
+        </svg>''',
+        "scikit-learn",
+        "LR & Random Forest",
+    ),
+    (
+        '''<svg width="32" height="32" viewBox="0 0 128 128">
+            <rect x="16" y="60" width="16" height="48" rx="4" fill="#3F4F75"/>
+            <rect x="42" y="36" width="16" height="72" rx="4" fill="#38BDF8"/>
+            <rect x="68" y="20" width="16" height="88" rx="4" fill="#6C63FF"/>
+            <rect x="94" y="48" width="16" height="60" rx="4" fill="#43E97B"/>
+        </svg>''',
+        "Plotly",
+        "Interactive Charts",
+    ),
+    (
+        '''<svg width="32" height="32" viewBox="0 0 128 128">
+            <ellipse cx="64" cy="30" rx="48" ry="16" fill="#0284C7"/>
+            <path fill="#0EA5E9" d="M16 30v30c0 9 21.5 16 48 16s48-7 48-16V30c0 9-21.5 16-48 16S16 39 16 30z"/>
+            <path fill="#38BDF8" d="M16 60v32c0 9 21.5 16 48 16s48-7 48-16V60c0 9-21.5 16-48 16S16 69 16 60z"/>
+        </svg>''',
+        "SQLite & joblib",
+        "Cache & Persistence",
+    ),
 ]
 
 stack_cols = st.columns(len(stack))
-for col, (icon, name, role) in zip(stack_cols, stack):
+for col, (svg_code, name, role) in zip(stack_cols, stack):
     with col:
         st.markdown(
-            f'<div style="text-align:center;padding:12px 4px;'
-            f'background:#161B22;border:1px solid #30363D;border-radius:10px;">'
-            f'<div style="font-size:1.3rem;">{icon}</div>'
-            f'<div style="font-weight:600;font-size:0.80rem;color:#E6EDF3;margin:4px 0 2px;">{name}</div>'
-            f'<div style="font-size:0.68rem;color:#8B949E;">{role}</div>'
+            f'<div style="text-align:center;padding:16px 6px;'
+            f'background:#161B22;border:1px solid #30363D;border-radius:12px;height:100%;'
+            f'display:flex;flex-direction:column;align-items:center;justify-content:center;">'
+            f'<div style="margin-bottom:8px;height:34px;display:flex;align-items:center;justify-content:center;">{svg_code}</div>'
+            f'<div style="font-weight:600;font-size:0.84rem;color:#E6EDF3;margin:2px 0 3px;">{name}</div>'
+            f'<div style="font-size:0.70rem;color:#8B949E;line-height:1.3;">{role}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )

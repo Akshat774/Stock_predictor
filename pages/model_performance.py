@@ -40,12 +40,14 @@ render_sidebar_footer()
 # HERO
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="hero-banner" style="padding:26px 40px;">
-    <div class="hero-title" style="font-size:2rem;">📊 Model Performance</div>
-    <p class="hero-subtitle">
-        Evaluate and compare Linear Regression and Random Forest on the
-        chronological held-out test set (last 20% of training data).
-    </p>
+<div class="hero-banner">
+    <div class="hero-icon-badge">🎯</div>
+    <div>
+        <div class="hero-title">Model Performance</div>
+        <p class="hero-subtitle">
+            Evaluate and compare Linear Regression and Random Forest models on chronological test sets with custom monthly/yearly filtering.
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -151,38 +153,175 @@ with st.spinner(f"Building test-set predictions for {avp_ticker}…"):
         y_pred_lr = get_predictions(lr_model, X_test)
         y_pred_rf = get_predictions(rf_model, X_test)
 
-        fig_avp = plot_actual_vs_predicted(
-            y_test=y_test.values,
-            y_pred_lr=y_pred_lr,
-            y_pred_rf=y_pred_rf,
-            dates=y_test.index,
+        # Combine into results DataFrame
+        df_results = pd.DataFrame(
+            {
+                "Actual": y_test.values,
+                "Linear Regression": y_pred_lr,
+                "Random Forest": y_pred_rf,
+            },
+            index=pd.to_datetime(y_test.index),
         )
-        st.plotly_chart(fig_avp, use_container_width=True)
 
-        # Per-ticker metrics
-        st.markdown(f"**Per-ticker test-set metrics for {avp_ticker}:**")
-        lr_m = compute_all_metrics(y_test, y_pred_lr)
-        rf_m = compute_all_metrics(y_test, y_pred_rf)
+        # ── Timeframe & Inspection Controls ──────────────────────────────────
+        st.markdown("##### ⏱️ Prediction Inspection & Time Filter")
+        c_mode, c_view = st.columns([1.5, 2.5])
+        with c_mode:
+            filter_mode = st.radio(
+                "Filter Mode",
+                [
+                    "📅 All Test Data (Daily)",
+                    "🗓️ Specific Year / Month",
+                    "📊 Time Aggregation (Daily / Monthly / Yearly)",
+                    "🔎 Single Day Inspector",
+                ],
+                key="perf_filter_mode",
+            )
 
-        ticker_rows = [
-            {"Model": "Linear Regression", **{k: f"{v:.4f}" for k, v in lr_m.items()}},
-            {"Model": "Random Forest",     **{k: f"{v:.4f}" for k, v in rf_m.items()}},
-        ]
-        st.dataframe(pd.DataFrame(ticker_rows), use_container_width=True, hide_index=True)
+        df_display = df_results.copy()
+        chart_title = f"{avp_ticker} — Actual vs Predicted (Test Set)"
 
-        # Inline best model for this ticker
-        ticker_full_metrics = {
-            "Linear Regression": lr_m,
-            "Random Forest":     rf_m,
-        }
-        best_here = best_model_by_metric(ticker_full_metrics, "RMSE")
-        st.markdown(
-            f'<div style="margin-top:8px; color:#8B949E; font-size:0.82rem;">'
-            f'🏆 Best model for <strong>{avp_ticker}</strong> by RMSE: '
-            f'<span class="badge badge-purple">{best_here}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+        with c_view:
+            if filter_mode == "🗓️ Specific Year / Month":
+                avail_years = sorted(list(df_results.index.year.unique()))
+                y_col, m_col = st.columns(2)
+                with y_col:
+                    sel_year = st.selectbox("Select Year", ["All Years"] + avail_years, index=0)
+                with m_col:
+                    month_map = {
+                        "All Months": None,
+                        "01 - January": 1, "02 - February": 2, "03 - March": 3,
+                        "04 - April": 4, "05 - May": 5, "06 - June": 6,
+                        "07 - July": 7, "08 - August": 8, "09 - September": 9,
+                        "10 - October": 10, "11 - November": 11, "12 - December": 12,
+                    }
+                    sel_month_name = st.selectbox("Select Month", list(month_map.keys()), index=0)
+                    sel_month = month_map[sel_month_name]
+
+                # Apply year & month filter
+                if sel_year != "All Years":
+                    df_display = df_display[df_display.index.year == sel_year]
+                if sel_month is not None:
+                    df_display = df_display[df_display.index.month == sel_month]
+
+                chart_title = f"{avp_ticker} — Actual vs Predicted ({sel_month_name.split(' - ')[-1] if sel_month else ''} {sel_year if sel_year != 'All Years' else 'All Years'})"
+
+            elif filter_mode == "📊 Time Aggregation (Daily / Monthly / Yearly)":
+                agg_type = st.selectbox(
+                    "Aggregation Level",
+                    ["Daily (Raw Points)", "Monthly Average", "Yearly Average"],
+                    key="perf_agg_type",
+                )
+                if agg_type == "Monthly Average":
+                    try:
+                        df_display = df_results.resample("ME").mean().dropna()
+                    except Exception:
+                        df_display = df_results.resample("M").mean().dropna()
+                    chart_title = f"{avp_ticker} — Monthly Average Actual vs Predicted"
+                elif agg_type == "Yearly Average":
+                    try:
+                        df_display = df_results.resample("YE").mean().dropna()
+                    except Exception:
+                        df_display = df_results.resample("Y").mean().dropna()
+                    chart_title = f"{avp_ticker} — Yearly Average Actual vs Predicted"
+
+            elif filter_mode == "🔎 Single Day Inspector":
+                dates_list = df_results.index.strftime("%Y-%m-%d").tolist()
+                sel_date_str = st.selectbox("Select Trading Date", dates_list, index=len(dates_list) - 1)
+                sel_date = pd.to_datetime(sel_date_str)
+                day_row = df_results.loc[sel_date]
+
+                act_val = float(day_row["Actual"])
+                lr_val = float(day_row["Linear Regression"])
+                rf_val = float(day_row["Random Forest"])
+                lr_err = abs(lr_val - act_val)
+                rf_err = abs(rf_val - act_val)
+                lr_pct = (lr_err / act_val) * 100
+                rf_pct = (rf_err / act_val) * 100
+
+                st.markdown(f"**Date: `{sel_date_str}` Inspection**")
+                d1, d2, d3 = st.columns(3)
+                d1.metric("Actual Close", f"${act_val:.2f}")
+                d2.metric("LR Prediction", f"${lr_val:.2f}", f"{lr_pct:+.2f}% err", delta_color="inverse")
+                d3.metric("RF Prediction", f"${rf_val:.2f}", f"{rf_pct:+.2f}% err", delta_color="inverse")
+
+                closer_model = "Linear Regression" if lr_err < rf_err else "Random Forest"
+                st.info(f"🏆 On **{sel_date_str}**, **{closer_model}** had the closest prediction (Error: ${min(lr_err, rf_err):.2f}).")
+
+                # Show a focused ±20 day window around this date on the chart
+                sel_idx = df_results.index.get_loc(sel_date)
+                start_idx = max(0, sel_idx - 15)
+                end_idx = min(len(df_results), sel_idx + 16)
+                df_display = df_results.iloc[start_idx:end_idx]
+                chart_title = f"{avp_ticker} — Focus Window around {sel_date_str}"
+
+        # ── Render Chart ─────────────────────────────────────────────────────
+        if df_display.empty:
+            st.warning("No data points match the selected date/month filter.")
+        else:
+            fig_avp = plot_actual_vs_predicted(
+                y_test=df_display["Actual"].values,
+                y_pred_lr=df_display["Linear Regression"].values,
+                y_pred_rf=df_display["Random Forest"].values,
+                dates=df_display.index,
+                title=chart_title,
+            )
+            
+            # If in Single Day Inspector, add a vertical line and annotation at selected date
+            if filter_mode == "🔎 Single Day Inspector":
+                fig_avp.add_vline(
+                    x=sel_date,
+                    line_width=2,
+                    line_dash="dot",
+                    line_color="#43E97B",
+                    annotation_text=f"Selected Day ({sel_date_str})",
+                    annotation_position="top left",
+                    annotation_font_color="#43E97B",
+                )
+            
+            st.plotly_chart(fig_avp, use_container_width=True)
+
+            # Recalculate metrics on filtered subset if > 1 sample
+            st.markdown(f"**Evaluation metrics for selected view ({len(df_display)} data point{'s' if len(df_display) > 1 else ''}):**")
+            if len(df_display) >= 2:
+                lr_m = compute_all_metrics(df_display["Actual"].values, df_display["Linear Regression"].values)
+                rf_m = compute_all_metrics(df_display["Actual"].values, df_display["Random Forest"].values)
+
+                ticker_rows = [
+                    {"Model": "Linear Regression", **{k: f"{v:.4f}" for k, v in lr_m.items()}},
+                    {"Model": "Random Forest",     **{k: f"{v:.4f}" for k, v in rf_m.items()}},
+                ]
+                st.dataframe(pd.DataFrame(ticker_rows), use_container_width=True, hide_index=True)
+
+                ticker_full_metrics = {
+                    "Linear Regression": lr_m,
+                    "Random Forest":     rf_m,
+                }
+                best_here = best_model_by_metric(ticker_full_metrics, "RMSE")
+                st.markdown(
+                    f'<div style="margin-top:8px; color:#8B949E; font-size:0.82rem;">'
+                    f'🏆 Best model for this period by RMSE: '
+                    f'<span class="badge badge-purple">{best_here}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.caption("Need at least 2 data points to compute statistical metrics.")
+
+            # ── Detailed Data Table Expander ─────────────────────────────────
+            with st.expander("📋 View Daily / Period Breakdown Table", expanded=False):
+                breakdown_df = df_display.copy()
+                breakdown_df["LR Diff ($)"] = breakdown_df["Linear Regression"] - breakdown_df["Actual"]
+                breakdown_df["RF Diff ($)"] = breakdown_df["Random Forest"] - breakdown_df["Actual"]
+                breakdown_df["LR Error (%)"] = (breakdown_df["LR Diff ($)"].abs() / breakdown_df["Actual"]) * 100
+                breakdown_df["RF Error (%)"] = (breakdown_df["RF Diff ($)"].abs() / breakdown_df["Actual"]) * 100
+                breakdown_df["Closest Model"] = np.where(
+                    breakdown_df["LR Diff ($)"].abs() < breakdown_df["RF Diff ($)"].abs(),
+                    "Linear Regression",
+                    "Random Forest",
+                )
+                formatted_df = breakdown_df.reset_index().rename(columns={"index": "Date"})
+                st.dataframe(formatted_df, use_container_width=True, hide_index=True)
 
     except Exception as exc:
         st.warning(f"Could not generate Actual vs Predicted chart: {exc}")
