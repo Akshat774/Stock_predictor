@@ -151,15 +151,18 @@ with right_col:
     }
     for name, path in MODEL_REGISTRY.items():
         ok = path.exists()
-        status_icon = "✅" if ok else "❌"
+        status_badge = '<span class="badge badge-green">Ready</span>' if ok else '<span class="badge badge-red">Missing</span>'
         icon, desc = model_icons.get(name, ("🤖", ""))
         st.markdown(
-            f'<div class="info-card" style="margin-bottom:10px;">'
-            f'{icon} <strong>{name}</strong> {status_icon}'
-            f'<br><span style="color:#8B949E;font-size:0.76rem;">{desc}</span>'
-            f'<br><span style="color:#8B949E;font-size:0.72rem;">'
-            f'{"Ready for inference" if ok else "Run train_models.py first"}'
-            f'</span></div>',
+            f'<div class="info-card" style="margin-bottom:12px; border-left: 4px solid var(--primary);">'
+            f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">'
+            f'<span style="font-weight:700; font-size:0.95rem; color:#F8FAFC;">{icon} {name}</span>'
+            f'{status_badge}'
+            f'</div>'
+            f'<div style="color:#CBD5E1; font-size:0.80rem; line-height:1.4;">{desc}</div>'
+            f'<div style="color:#A8B2D8; font-size:0.75rem; margin-top:4px;">'
+            f'{"● Serialised pipeline loaded" if ok else "● Run train_models.py first"}'
+            f'</div></div>',
             unsafe_allow_html=True,
         )
 
@@ -187,14 +190,14 @@ steps = [
 workflow_html = '<div style="display: flex; align-items: center; justify-content: space-between; overflow-x: auto; padding: 10px 0; gap: 8px;">'
 for i, (icon, title, desc) in enumerate(steps):
     workflow_html += f"""
-        <div style="flex: 1; text-align: center; padding: 14px 6px; background: #161B22; border: 1px solid #30363D; border-radius: 12px; min-width: 110px;">
+        <div style="flex: 1; text-align: center; padding: 16px 8px; background: #161B22; border: 1px solid #3D444D; border-radius: 12px; min-width: 110px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
             <div style="font-size: 1.5rem;">{icon}</div>
-            <div style="font-weight: 600; font-size: 0.86rem; color: #E6EDF3; margin: 5px 0 2px;">{title}</div>
-            <div style="font-size: 0.70rem; color: #8B949E;">{desc}</div>
+            <div style="font-weight: 700; font-size: 0.88rem; color: #F8FAFC; margin: 6px 0 3px;">{title}</div>
+            <div style="font-size: 0.76rem; color: #CBD5E1; line-height: 1.3;">{desc}</div>
         </div>
     """
     if i < len(steps) - 1:
-        workflow_html += '<div style="color: #6C63FF; font-size: 1.2rem; font-weight: bold;">→</div>'
+        workflow_html += '<div style="color: #A78BFA; font-size: 1.3rem; font-weight: bold; text-shadow: 0 0 8px rgba(108,99,255,0.4);">→</div>'
 workflow_html += '</div>'
 st.markdown(workflow_html, unsafe_allow_html=True)
 
@@ -298,11 +301,12 @@ for col, (svg_code, name, role) in zip(stack_cols, stack):
     with col:
         st.markdown(
             f'<div style="text-align:center;padding:16px 6px;'
-            f'background:#161B22;border:1px solid #30363D;border-radius:12px;height:100%;'
-            f'display:flex;flex-direction:column;align-items:center;justify-content:center;">'
+            f'background:#161B22;border:1px solid #3D444D;border-radius:12px;height:100%;'
+            f'display:flex;flex-direction:column;align-items:center;justify-content:center;'
+            f'box-shadow:0 2px 8px rgba(0,0,0,0.2);">'
             f'<div style="margin-bottom:8px;height:34px;display:flex;align-items:center;justify-content:center;">{svg_code}</div>'
-            f'<div style="font-weight:600;font-size:0.84rem;color:#E6EDF3;margin:2px 0 3px;">{name}</div>'
-            f'<div style="font-size:0.70rem;color:#8B949E;line-height:1.3;">{role}</div>'
+            f'<div style="font-weight:700;font-size:0.86rem;color:#F8FAFC;margin:2px 0 3px;">{name}</div>'
+            f'<div style="font-size:0.75rem;color:#CBD5E1;line-height:1.35;">{role}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )

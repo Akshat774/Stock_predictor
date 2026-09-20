@@ -185,7 +185,7 @@ def plot_advanced_chart(df: pd.DataFrame, ticker: str, last_n: int = 150) -> go.
     
     # 1. Volume Bar Chart (Secondary Y, drawn first so it's behind price)
     direction = subset["Close"].diff().fillna(0)
-    vol_colors = ["rgba(67, 233, 123, 0.3)" if d >= 0 else "rgba(255, 101, 132, 0.3)" for d in direction]
+    vol_colors = [PALETTE["accent"] if d >= 0 else PALETTE["secondary"] for d in direction]
     
     fig.add_trace(
         go.Bar(
@@ -193,6 +193,7 @@ def plot_advanced_chart(df: pd.DataFrame, ticker: str, last_n: int = 150) -> go.
             y=subset["Volume"],
             name="Volume",
             marker_color=vol_colors,
+            opacity=0.6,
             hovertemplate="Volume: %{y:,.0f}<extra></extra>",
         ),
         secondary_y=True,

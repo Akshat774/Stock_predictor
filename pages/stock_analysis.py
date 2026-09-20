@@ -115,7 +115,7 @@ with s6:
 st.divider()
 
 st.markdown(
-    '<p style="color:#8B949E;font-size:0.85rem;margin-bottom:10px;">'
+    '<p style="color:#CBD5E1; font-size:0.88rem; margin-bottom:10px; font-weight:500;">'
     'Interactive advanced chart with Candlesticks, Volume, and Moving Averages.</p>',
     unsafe_allow_html=True,
 )

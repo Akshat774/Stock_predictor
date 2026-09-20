@@ -9,6 +9,7 @@ All inference is performed by loading the pre-saved .pkl files.
 """
 
 import datetime
+import re
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -29,6 +30,142 @@ from utils.plotting import plot_historical_close, plot_prediction_gauge
 # ── Apply shared theme & sidebar ──────────────────────────────────────────────
 inject_css()
 render_sidebar_footer()
+
+def render_ai_analysis_cards(analysis_text: str) -> None:
+    """Renders structured Gemini analysis as beautiful, high-contrast visual cards with zero LaTeX math collision."""
+    if not analysis_text:
+        return
+
+    # Check for error or warning states
+    if (
+        analysis_text.startswith("**Invalid")
+        or analysis_text.startswith("**Gemini API error")
+        or analysis_text.startswith("**Gemini Service")
+        or analysis_text.startswith("**Gemini API rate limit")
+        or analysis_text.startswith("**Gemini API key not set")
+        or analysis_text.startswith("**Gemini model not available")
+        or analysis_text.startswith("**No response")
+    ):
+        st.warning(analysis_text)
+        return
+
+    # Ensure dollar signs are escaped to prevent Streamlit KaTeX LaTeX collision
+    sanitized = re.sub(r'(?<!\\)\$', r'\$', analysis_text)
+
+    # Section metadata configuration
+    SECTION_META = {
+        "trend": {
+            "icon": "📈",
+            "title": "Price Trend Analysis",
+            "color": "#38BDF8",
+            "badge": "Trend Momentum",
+            "badge_cls": "badge-blue",
+        },
+        "technical": {
+            "icon": "⚡",
+            "title": "Technical Signal Breakdown",
+            "color": "#818CF8",
+            "badge": "Technical Signals",
+            "badge_cls": "badge-purple",
+        },
+        "rationale": {
+            "icon": "🎯",
+            "title": "Prediction Rationale",
+            "color": "#A78BFA",
+            "badge": "ML Decision Logic",
+            "badge_cls": "badge-purple",
+        },
+        "risk": {
+            "icon": "🛡️",
+            "title": "Key Risk Factors",
+            "color": "#FFB86C",
+            "badge": "Risk Assessment",
+            "badge_cls": "badge-red",
+        },
+        "summary": {
+            "icon": "📌",
+            "title": "Executive Summary",
+            "color": "#43E97B",
+            "badge": "Key Takeaway",
+            "badge_cls": "badge-green",
+        },
+    }
+
+    # Split into sections using markdown headers
+    pattern = r'(?m)^#{2,4}\s*(.+)$'
+    matches = list(re.finditer(pattern, sanitized))
+
+    # Top synthesis bar
+    active_model = st.session_state.get("gemini_model", "gemini-flash-latest")
+    st.markdown(
+        f"""
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:18px; padding:10px 18px; background:rgba(108,99,255,0.10); border:1px solid rgba(108,99,255,0.30); border-radius:12px;">
+            <div style="font-size:0.86rem; color:#CBD5E1; display:flex; align-items:center; gap:8px;">
+                <span>🤖</span> <span>AI Engine: <strong style="color:#F8FAFC;">{active_model}</strong></span>
+            </div>
+            <span class="badge badge-purple">Institutional Intelligence</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    if not matches:
+        st.markdown(
+            f'<div class="ai-card" style="border-left: 5px solid var(--primary);">{sanitized}</div>',
+            unsafe_allow_html=True
+        )
+        return
+
+    for i, match in enumerate(matches):
+        raw_title = match.group(1).strip()
+        start = match.end()
+        end = matches[i+1].start() if i+1 < len(matches) else len(sanitized)
+        content = sanitized[start:end].strip()
+
+        # Match section type
+        lower_t = raw_title.lower()
+        key = "default"
+        if "trend" in lower_t or "price" in lower_t:
+            key = "trend"
+        elif "technical" in lower_t or "signal" in lower_t or "indicator" in lower_t:
+            key = "technical"
+        elif "rationale" in lower_t or "prediction" in lower_t or "reason" in lower_t:
+            key = "rationale"
+        elif "risk" in lower_t or "factor" in lower_t or "caution" in lower_t:
+            key = "risk"
+        elif "summary" in lower_t or "conclusion" in lower_t or "takeaway" in lower_t:
+            key = "summary"
+
+        meta = SECTION_META.get(key, {
+            "icon": "💡",
+            "title": raw_title,
+            "color": "#6C63FF",
+            "badge": "Insight",
+            "badge_cls": "badge-blue",
+        })
+
+        clean_title = re.sub(r'^[^\w\s]+\s*', '', raw_title) or meta["title"]
+        icon = meta["icon"]
+        card_color = meta["color"]
+        badge_label = meta["badge"]
+        badge_class = meta["badge_cls"]
+
+        st.markdown(
+            f"""
+            <div class="ai-card" style="border-left: 5px solid {card_color}; margin-bottom: 16px;">
+                <div class="ai-card-header">
+                    <div class="ai-card-title">
+                        <span>{icon}</span> <span>{clean_title}</span>
+                    </div>
+                    <span class="badge {badge_class}">{badge_label}</span>
+                </div>
+                <div class="ai-card-body">
+            """,
+            unsafe_allow_html=True
+        )
+        # Render markdown content natively
+        st.markdown(content)
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HERO
@@ -149,15 +286,15 @@ if result and result["ticker"] == ticker and result["model_name"] == model_choic
             color = "#43E97B" if delta_pct >= 0 else "#FF6584"
             st.markdown(
                 f"""
-                <div class="info-card" style="margin-bottom: 20px; border-left: 4px solid {color};">
-                    <div style="font-size:0.78rem; color:#8B949E; text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">🔴 Real-Time Price</div>
-                    <div style="font-size:1.7rem; font-weight:700; color:#E6EDF3; margin: 4px 0;">
-                        ${last_price:.2f} <span style="font-size:0.9rem; font-weight:normal; color:#8B949E;">{currency}</span>
-                        <span style="font-size:1.15rem; margin-left:12px; color:{color}; font-weight:600;">
+                <div class="info-card" style="margin-bottom: 20px; border-left: 5px solid {color}; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
+                    <div style="font-size:0.82rem; color:#CBD5E1; text-transform:uppercase; font-weight:700; letter-spacing:0.8px;">🔴 Real-Time Price Stream</div>
+                    <div style="font-size:1.85rem; font-weight:700; color:#F8FAFC; margin: 4px 0;">
+                        ${last_price:.2f} <span style="font-size:0.95rem; font-weight:600; color:#CBD5E1;">{currency}</span>
+                        <span style="font-size:1.20rem; margin-left:14px; color:{color}; font-weight:700;">
                             {delta_pct:+.2f}% ({delta:+.2f})
                         </span>
                     </div>
-                    <div style="font-size:0.7rem; color:#8B949E;">
+                    <div style="font-size:0.76rem; color:#A8B2D8;">
                         Last updated: {datetime.datetime.now().strftime('%H:%M:%S')} (Auto-refreshes every 10s)
                     </div>
                 </div>
@@ -178,8 +315,8 @@ if result and result["ticker"] == ticker and result["model_name"] == model_choic
         use_container_width=True,
     )
 
-    # ── Three metric tiles ───────────────────────────────────────────────────
-    m1, m2, m3 = st.columns(3)
+    # ── Four metric tiles ───────────────────────────────────────────────────
+    m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.metric("Current Close", f"${result['current_close']:.2f}",
                   help="Most recent available closing price")
@@ -190,6 +327,13 @@ if result and result["ticker"] == ticker and result["model_name"] == model_choic
             delta=f"{pct:+.2f}%",
         )
     with m3:
+        conf_val = result.get("confidence_pct", 95.0)
+        st.metric(
+            "Confidence Score",
+            f"{conf_val:.1f}%",
+            help="Ensemble decision tree agreement and variance uncertainty measure",
+        )
+    with m4:
         st.metric("Signal", signal_txt)
 
     # ── Rich prediction box ───────────────────────────────────────────────────
@@ -198,11 +342,16 @@ if result and result["ticker"] == ticker and result["model_name"] == model_choic
         <div class="predict-box">
             <div class="label">{model_choice} &nbsp;·&nbsp; {ticker}</div>
             <div class="value {color_cls}">${result['predicted_close']:.4f}</div>
-            <div style="font-size:1.05rem;color:#A8B2D8;margin-top:8px;">
+            <div style="font-size:1.10rem; color:#CBD5E1; font-weight:500; margin-top:8px;">
                 {arrow} {abs(pct):.2f}% vs current close of ${result['current_close']:.4f}
             </div>
-            <div style="font-size:0.80rem;color:#8B949E;margin-top:8px;">
-                Estimated for: <strong>{result['prediction_date']}</strong>
+            <div style="display:inline-flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:14px; margin-top:16px; padding:10px 22px; background:rgba(108,99,255,0.16); border:1px solid rgba(108,99,255,0.45); border-radius:28px; font-size:0.88rem; color:#F8FAFC; box-shadow:0 2px 10px rgba(108,99,255,0.15);">
+                <span>🎯 <strong>Confidence:</strong> <span style="color:#43E97B; font-weight:700;">{conf_val:.1f}%</span></span>
+                <span style="color:#A78BFA; font-weight:bold;">|</span>
+                <span>📏 <strong>Expected 95% Range:</strong> <strong style="color:#F8FAFC;">${result.get('lower_bound', result['predicted_close']):.2f} – ${result.get('upper_bound', result['predicted_close']):.2f}</strong></span>
+            </div>
+            <div style="font-size:0.84rem; color:#CBD5E1; margin-top:14px;">
+                Estimated Target Date: <strong style="color:#F8FAFC;">{result['prediction_date']}</strong>
             </div>
         </div>
         """,
@@ -238,12 +387,7 @@ if result and result["ticker"] == ticker and result["model_name"] == model_choic
                 )
                 st.session_state["analysis_cache"] = analysis_text
         
-        st.markdown(
-            f'<div class="info-card" style="line-height: 1.6;">'
-            f'{st.session_state["analysis_cache"]}'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+        render_ai_analysis_cards(st.session_state["analysis_cache"])
 
     st.divider()
 

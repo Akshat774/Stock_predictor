@@ -24,6 +24,7 @@ Model:
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -97,50 +98,57 @@ def _build_prompt(
     )
 
     prompt = f"""
-You are a professional quantitative stock market analyst. Based on the data below,
-write a clear, insightful analysis explaining WHY the stock is predicted to {direction} tomorrow.
+You are a senior quantitative stock market analyst. Based on the market data below,
+write a clear, deeply insightful, professional analysis explaining WHY the stock is predicted to {direction} tomorrow.
 
 ## Stock Data Summary
 - Ticker: {ticker}
 - Prediction Model: {model_name}
-- Current Close Price: ${current_close:.4f}
-- Predicted Next Close: ${predicted_close:.4f} (for {prediction_date})
+- Current Close Price: \\${current_close:.4f}
+- Predicted Next Close: \\${predicted_close:.4f} (for {prediction_date})
 - Expected Change: {pct_change:+.2f}% (Moving {arrow})
 
 ## Technical Indicators (Latest Trading Day)
-- Open: ${features.get('Open', 0):.2f}
-- High: ${features.get('High', 0):.2f}
-- Low: ${features.get('Low', 0):.2f}
+- Open: \\${features.get('Open', 0):.2f}
+- High: \\${features.get('High', 0):.2f}
+- Low: \\${features.get('Low', 0):.2f}
 - Volume: {int(features.get('Volume', 0)):,} shares
-- Previous Close (Lag-1): ${features.get('Prev_Close', 0):.4f}
-- MA5 (5-day moving avg): ${ma5:.4f}
-- MA10 (10-day moving avg): ${ma10:.4f}
+- Previous Close (Lag-1): \\${features.get('Prev_Close', 0):.4f}
+- MA5 (5-day moving avg): \\${ma5:.4f}
+- MA10 (10-day moving avg): \\${ma10:.4f}
 - Moving Average Signal: {ma_signal}{trend_context}
 
-## Instructions
-Write a structured analysis with the following sections in MARKDOWN format:
+## Critical Formatting Requirements
+1. DOLLAR SIGNS: Always write prices with an escaped backslash like \\${current_close:.2f} (e.g., \\$336.13, \\$337.00). NEVER write unescaped dollar signs, because Markdown parsers treat them as LaTeX math delimiters and scramble words.
+2. Structure your analysis using the following EXACT markdown section headings:
 
 ### Price Trend Analysis
-(Explain the recent price movement pattern based on current close, MA5, MA10, and recent prices)
+(Explain recent price movement, momentum, and position relative to MA5/MA10 in 2-3 clear sentences)
 
 ### Technical Signal Breakdown
-(Explain what each indicator tells us: MA crossover, volume, day range High-Low spread, momentum)
+(Provide 3 bullet points with bold sub-labels explaining: Moving Average Crossover, Volume & Volatility spread, and Intraday Momentum)
 
 ### Prediction Rationale
-(Explain specifically why the {model_name} model is predicting a {direction} for {ticker})
+(Explain the mathematical reasoning why the {model_name} model forecasts a {direction} for {ticker} using 2 numbered points)
 
 ### Key Risk Factors
-(Mention 2-3 factors that could invalidate this prediction - keep it realistic and honest)
+(List 2 realistic technical market factors that could invalidate this prediction in bullet points)
 
 ### Summary
-(One or two sentence confident conclusion)
+(A concise, 1-2 sentence executive takeaway)
 
-Keep the tone professional but accessible. Use actual numbers from the data above.
-Do NOT include generic disclaimers about stock prediction being uncertain.
-Total response should be 250-400 words.
+Keep the tone professional, institutional, and easy to read. Use actual numbers from the data. Total length: 250-380 words.
 """.strip()
 
     return prompt
+
+
+def _sanitize_markdown(text: str) -> str:
+    """Escape solitary/currency dollar signs to prevent Streamlit KaTeX LaTeX collision."""
+    if not text:
+        return text
+    # Escape dollar signs that are not already preceded by a backslash
+    return re.sub(r'(?<!\\)\$', r'\$', text)
 
 
 def generate_analysis(
@@ -156,20 +164,6 @@ def generate_analysis(
     Call Google Gemini API to generate a market analysis explanation.
 
     Uses the new google.genai SDK (google-genai package, not google-generativeai).
-
-    Parameters
-    ----------
-    ticker             : Stock ticker symbol
-    model_name         : Name of the ML model used
-    prediction_result  : Dict returned by predict_next_close()
-    latest_features    : Dict of latest feature values {Open, High, Low, ...}
-    recent_prices      : Optional list of recent Close prices for trend context
-    api_key            : Gemini API key. Falls back to GEMINI_API_KEY env var.
-
-    Returns
-    -------
-    str
-        Markdown-formatted AI analysis, or an error message string.
     """
     # Resolve API key
     key = api_key or os.environ.get("GEMINI_API_KEY", "")
@@ -182,7 +176,6 @@ def generate_analysis(
 
     try:
         from google import genai
-        from google.genai import types
 
         client = genai.Client(api_key=key)
 
@@ -197,14 +190,40 @@ def generate_analysis(
             recent_prices=recent_prices,
         )
 
-        logger.info("Calling Gemini API (%s) for %s analysis...", gemini_model_id, ticker)
-        response = client.models.generate_content(
-            model=gemini_model_id,
-            contents=prompt,
-        )
-        analysis = response.text.strip() if response.text else ""
-        logger.info("Gemini response received (%d chars)", len(analysis))
-        return analysis
+        # List of models to try in order of preference if primary experiences high demand (503)
+        candidate_models = [gemini_model_id]
+        fallback_pool = ["gemini-flash-latest", "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite"]
+        for m in fallback_pool:
+            if m not in candidate_models:
+                candidate_models.append(m)
+
+        last_error = None
+        for current_model in candidate_models:
+            try:
+                logger.info("Calling Gemini API (%s) for %s analysis...", current_model, ticker)
+                response = client.models.generate_content(
+                    model=current_model,
+                    contents=prompt,
+                )
+                if response and response.text:
+                    analysis = response.text.strip()
+                    logger.info("Gemini response received from %s (%d chars)", current_model, len(analysis))
+                    return _sanitize_markdown(analysis)
+            except Exception as exc_call:
+                last_error = exc_call
+                err_str = str(exc_call)
+                # If it's a 503 high demand or 429, try the next model in the fallback pool
+                if "503" in err_str or "high demand" in err_str.lower() or "429" in err_str:
+                    logger.warning("Model %s busy/unavailable (%s). Trying fallback...", current_model, err_str[:100])
+                    continue
+                else:
+                    # Other fatal errors (e.g. invalid key) should break immediately
+                    raise exc_call
+
+        if last_error:
+            raise last_error
+
+        return "**No response generated by Gemini AI.**"
 
     except ImportError:
         # Fallback: try the legacy google.generativeai if google.genai not installed
@@ -223,7 +242,7 @@ def generate_analysis(
                 recent_prices=recent_prices,
             )
             response = model_obj.generate_content(prompt)
-            return response.text.strip()
+            return _sanitize_markdown(response.text.strip())
         except Exception as exc2:
             return f"**Gemini SDK not found.** Please run: `pip install google-genai`\n\nError: {exc2}"
 
@@ -233,20 +252,26 @@ def generate_analysis(
 
         # User-friendly error messages for common failures
         if "API_KEY_INVALID" in error_msg or "API key not valid" in error_msg:
-            return "**Invalid Gemini API key.** Please double-check the key you entered."
+            return "**Invalid Gemini API key.** Please double-check the key you entered in the sidebar or `.env`."
+        if "503" in error_msg or "high demand" in error_msg.lower() or "UNAVAILABLE" in error_msg:
+            return (
+                "**⚠️ Gemini Service Temporarily Busy (503 High Demand)**\n\n"
+                "Google's servers for this model are currently experiencing high traffic spikes. "
+                "Your API key is valid.\n\n"
+                "**Quick Solutions:**\n"
+                "- Try selecting a different model from the **Gemini Model dropdown** in the sidebar (e.g., `gemini-3.5-flash` or `gemini-3.1-flash-lite`).\n"
+                "- Click **Predict Next Close** again in a few seconds."
+            )
         if "quota" in error_msg.lower() or "429" in error_msg:
             return (
-                "**Gemini API rate limit reached.**\n\n"
-                "The free-tier daily quota has been exceeded. "
-                "Please wait until tomorrow or upgrade your plan at "
-                "[aistudio.google.com](https://aistudio.google.com/app/apikey).\n\n"
-                f"*Technical detail: {error_msg[:200]}*"
+                "**Gemini API rate limit reached (429).**\n\n"
+                "The free-tier quota for this model has been reached. "
+                "Try selecting an alternative model in the sidebar dropdown or wait a moment."
             )
         if "404" in error_msg or "not found" in error_msg.lower():
             return (
-                "**Gemini model not available.**\n\n"
-                f"Model `{gemini_model_id}` may not be available on your API key's region. "
-                "Try a different model or check your API key permissions."
+                "**Gemini model not available (404).**\n\n"
+                f"Model `{gemini_model_id}` is not available. Please pick another model in the sidebar."
             )
         return f"**Gemini API error:** {error_msg}"
 

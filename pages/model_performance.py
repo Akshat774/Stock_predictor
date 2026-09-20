@@ -81,12 +81,12 @@ best_r2_model   = metrics_data.get("best_model_by_r2",   "N/A")
 # WINNER BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown(
-    f'<div class="info-card" style="margin-bottom:20px;">'
-    f'🏆 <strong>Best model by RMSE:</strong> '
-    f'<span class="badge badge-purple">{best_rmse_model}</span>'
-    f'&nbsp;&nbsp;|&nbsp;&nbsp;'
-    f'🏆 <strong>Best model by R²:</strong> '
-    f'<span class="badge badge-green">{best_r2_model}</span>'
+    f'<div class="info-card" style="margin-bottom:20px; border-left: 4px solid var(--primary); display:flex; align-items:center; flex-wrap:wrap; gap:12px;">'
+    f'<span style="font-size:0.92rem; color:#F8FAFC;">🏆 <strong>Best model by RMSE:</strong> '
+    f'<span class="badge badge-purple">{best_rmse_model}</span></span>'
+    f'<span style="color:#A78BFA;">|</span>'
+    f'<span style="font-size:0.92rem; color:#F8FAFC;">🏆 <strong>Best model by R²:</strong> '
+    f'<span class="badge badge-green">{best_r2_model}</span></span>'
     f'</div>',
     unsafe_allow_html=True,
 )
@@ -299,7 +299,7 @@ with st.spinner(f"Building test-set predictions for {avp_ticker}…"):
                 }
                 best_here = best_model_by_metric(ticker_full_metrics, "RMSE")
                 st.markdown(
-                    f'<div style="margin-top:8px; color:#8B949E; font-size:0.82rem;">'
+                    f'<div style="margin-top:10px; color:#CBD5E1; font-size:0.88rem; font-weight:600;">'
                     f'🏆 Best model for this period by RMSE: '
                     f'<span class="badge badge-purple">{best_here}</span>'
                     f'</div>',

@@ -73,8 +73,11 @@ GLOBAL_CSS = """
     --accent:     #43E97B;
     --neutral:    #A8B2D8;
     --text:       #E6EDF3;
+    --text-bright:#F8FAFC;
     --text-muted: #8B949E;
+    --text-sub:   #CBD5E1;
     --border:     #30363D;
+    --border-vis: #3D444D;
     --radius:     14px;
 }
 
@@ -89,13 +92,21 @@ html, body, [class*="css"] {
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
     background: linear-gradient(160deg, #0D1117 0%, #161B22 100%) !important;
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--border-vis);
+}
+[data-testid="stSidebar"] .stMarkdown p,
+[data-testid="stSidebar"] .stMarkdown strong {
+    color: var(--text) !important;
+}
+[data-testid="stSidebar"] hr {
+    border-color: var(--border-vis) !important;
+    opacity: 0.8;
 }
 
 /* ── Metrics ── */
 [data-testid="stMetric"] {
     background: var(--bg-card) !important;
-    border: 1px solid var(--border) !important;
+    border: 1px solid var(--border-vis) !important;
     border-radius: var(--radius) !important;
     padding: 14px 16px !important;
     height: 100% !important;
@@ -103,16 +114,19 @@ html, body, [class*="css"] {
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
 }
 [data-testid="stMetricLabel"] {
-    color: var(--text-muted) !important;
-    font-size: 0.74rem !important;
+    color: var(--text-sub) !important;
+    font-size: 0.80rem !important;
+    font-weight: 500 !important;
     white-space: nowrap !important;
+    letter-spacing: 0.2px !important;
 }
 [data-testid="stMetricValue"] {
-    color: var(--text) !important;
+    color: var(--text-bright) !important;
     font-size: 1.15rem !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     white-space: normal !important;
     word-break: break-word !important;
     line-height: 1.25 !important;
@@ -121,6 +135,10 @@ html, body, [class*="css"] {
     white-space: normal !important;
     text-overflow: unset !important;
     overflow: visible !important;
+}
+[data-testid="stMetricDelta"] {
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
 }
 
 /* ── Buttons ── */
@@ -131,6 +149,7 @@ html, body, [class*="css"] {
     border-radius: 10px !important;
     padding: 10px 28px !important;
     font-weight: 600 !important;
+    font-size: 0.90rem !important;
     letter-spacing: 0.4px !important;
     transition: all 0.22s ease !important;
     box-shadow: 0 4px 15px rgba(108,99,255,0.30) !important;
@@ -144,33 +163,52 @@ html, body, [class*="css"] {
 .stSelectbox > div > div,
 .stTextInput > div > div > input {
     background: var(--bg-card2) !important;
-    border: 1px solid var(--border) !important;
+    border: 1px solid var(--border-vis) !important;
     border-radius: 10px !important;
-    color: var(--text) !important;
+    color: var(--text-bright) !important;
+    font-size: 0.88rem !important;
+}
+.stSelectbox label,
+.stTextInput label,
+.stDateInput label,
+.stSlider label,
+.stRadio label {
+    color: var(--text-sub) !important;
+    font-weight: 500 !important;
+    font-size: 0.85rem !important;
 }
 
 /* ── Section header ── */
 .section-header {
-    background: linear-gradient(90deg, rgba(108,99,255,0.13) 0%, rgba(13,17,23,0) 100%);
-    border-left: 4px solid var(--primary);
-    padding: 10px 18px;
+    background: linear-gradient(90deg, rgba(108,99,255,0.18) 0%, rgba(13,17,23,0) 100%);
+    border-left: 5px solid var(--primary);
+    padding: 12px 20px;
     border-radius: 0 var(--radius) var(--radius) 0;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
+    box-shadow: inset 0 0 20px rgba(108,99,255,0.05);
 }
-.section-header h2 { margin: 0; color: var(--text); font-size: 1.25rem; font-weight: 600; }
+.section-header h2 {
+    margin: 0;
+    color: var(--text-bright) !important;
+    font-size: 1.30rem;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
 
 /* ── Hero banner ── */
 .hero-banner {
     display: flex;
     align-items: center;
     background: linear-gradient(135deg, #131824 0%, #0F172A 50%, #1A173B 100%);
-    border: 1px solid rgba(108, 99, 255, 0.28);
+    border: 1px solid rgba(108, 99, 255, 0.35);
     border-radius: 18px;
-    padding: 24px 32px;
-    margin-bottom: 24px;
+    padding: 28px 36px;
+    margin-bottom: 26px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                0 0 40px rgba(108, 99, 255, 0.08);
 }
 .hero-banner::before {
     content: '';
@@ -187,15 +225,15 @@ html, body, [class*="css"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
     border-radius: 14px;
-    background: linear-gradient(135deg, rgba(108, 99, 255, 0.22), rgba(67, 233, 123, 0.15));
-    border: 1px solid rgba(108, 99, 255, 0.40);
-    font-size: 1.75rem;
-    margin-right: 20px;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.28), rgba(67, 233, 123, 0.18));
+    border: 1px solid rgba(108, 99, 255, 0.50);
+    font-size: 1.85rem;
+    margin-right: 22px;
     flex-shrink: 0;
-    box-shadow: 0 4px 16px rgba(108, 99, 255, 0.25);
+    box-shadow: 0 4px 20px rgba(108, 99, 255, 0.30);
 }
 .hero-title {
     font-size: 2.1rem;
@@ -203,59 +241,223 @@ html, body, [class*="css"] {
     background: linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 50%, #A5B4FC 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin: 0 0 6px 0;
+    margin: 0 0 8px 0;
     letter-spacing: -0.4px;
 }
 .hero-subtitle {
-    font-size: 0.94rem;
-    color: #94A3B8;
+    font-size: 0.96rem;
+    color: #CBD5E1;
     margin: 0;
-    max-width: 680px;
-    line-height: 1.55;
+    max-width: 700px;
+    line-height: 1.6;
 }
 
 /* ── Badges ── */
 .badge {
-    display: inline-block; padding: 3px 11px;
-    border-radius: 20px; font-size: 0.76rem; font-weight: 600; margin: 2px;
+    display: inline-block; padding: 4px 12px;
+    border-radius: 20px; font-size: 0.78rem; font-weight: 600; margin: 2px;
 }
-.badge-green  { background: rgba(67,233,123,0.13); color: #43E97B; border: 1px solid rgba(67,233,123,0.28); }
-.badge-red    { background: rgba(255,101,132,0.13); color: #FF6584; border: 1px solid rgba(255,101,132,0.28); }
-.badge-purple { background: rgba(108,99,255,0.13); color: #6C63FF; border: 1px solid rgba(108,99,255,0.28); }
-.badge-blue   { background: rgba(56,189,248,0.13); color: #38BDF8; border: 1px solid rgba(56,189,248,0.28); }
+.badge-green  { background: rgba(67,233,123,0.15); color: #43E97B; border: 1px solid rgba(67,233,123,0.35); }
+.badge-red    { background: rgba(255,101,132,0.15); color: #FF6584; border: 1px solid rgba(255,101,132,0.35); }
+.badge-purple { background: rgba(108,99,255,0.15); color: #A78BFA; border: 1px solid rgba(108,99,255,0.35); }
+.badge-blue   { background: rgba(56,189,248,0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.35); }
 
 /* ── Info card ── */
 .info-card {
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 18px 22px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-vis);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    color: var(--text) !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.20);
+}
+.info-card strong {
+    color: var(--text-bright) !important;
+}
+
+/* ── AI Insight Card ── */
+.ai-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-vis);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+.ai-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(61, 68, 77, 0.5);
+}
+.ai-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ai-card-body {
+    color: var(--text-sub);
+    font-size: 0.92rem;
+    line-height: 1.65;
+}
+.ai-card-body p {
+    margin-bottom: 8px;
+    color: var(--text-sub) !important;
+}
+.ai-card-body ul, .ai-card-body ol {
+    margin: 8px 0 12px 20px;
+    padding-left: 4px;
+}
+.ai-card-body li {
+    margin-bottom: 8px;
+    color: var(--text-sub) !important;
+    line-height: 1.6;
+}
+.ai-card-body strong {
+    color: var(--text-bright) !important;
+    font-weight: 600;
 }
 
 /* ── Prediction box ── */
 .predict-box {
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 28px 32px;
-    text-align: center; margin-top: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-vis);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    text-align: center;
+    margin-top: 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
 }
-.predict-box .label { color: var(--text-muted); font-size: 0.83rem; text-transform: uppercase; letter-spacing: 1px; }
+.predict-box .label {
+    color: var(--text-sub);
+    font-size: 0.88rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 600;
+}
 .predict-box .value { font-size: 2.5rem; font-weight: 700; }
 .predict-box .green { color: var(--accent); }
 .predict-box .red   { color: var(--secondary); }
 
 /* ── Divider ── */
-hr { border-color: var(--border) !important; margin: 22px 0 !important; }
+hr {
+    border-color: var(--border-vis) !important;
+    margin: 24px 0 !important;
+    opacity: 0.8;
+}
 
 /* ── DataFrame ── */
-.dataframe thead th { background: var(--bg-card2) !important; color: var(--primary) !important; }
-.dataframe tbody tr:hover { background: rgba(108,99,255,0.06) !important; }
+.dataframe {
+    border: 1px solid var(--border-vis) !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+}
+.dataframe thead th {
+    background: #1C2433 !important;
+    color: #A78BFA !important;
+    font-weight: 600 !important;
+    font-size: 0.84rem !important;
+    border-bottom: 2px solid var(--primary) !important;
+    padding: 10px 12px !important;
+}
+.dataframe tbody td {
+    color: var(--text) !important;
+    font-size: 0.84rem !important;
+    border-bottom: 1px solid rgba(48,54,61,0.5) !important;
+    padding: 8px 12px !important;
+}
+.dataframe tbody tr:hover { background: rgba(108,99,255,0.08) !important; }
 
 /* ── Tab bar ── */
 [data-testid="stTabs"] button[data-baseweb="tab"] {
-    color: var(--text-muted) !important;
+    color: var(--text-sub) !important;
     font-weight: 500;
+    font-size: 0.88rem !important;
 }
 [data-testid="stTabs"] button[aria-selected="true"] {
-    color: var(--primary) !important;
+    color: #A78BFA !important;
     border-bottom-color: var(--primary) !important;
+    font-weight: 700 !important;
+}
+
+/* ── Expander ── */
+[data-testid="stExpander"] {
+    border: 1px solid var(--border-vis) !important;
+    border-radius: var(--radius) !important;
+    background: var(--bg-card) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+[data-testid="stExpander"] summary {
+    color: var(--text) !important;
+    font-weight: 600 !important;
+    font-size: 0.90rem !important;
+    padding: 12px 16px !important;
+}
+[data-testid="stExpander"] summary:hover {
+    color: var(--primary) !important;
+}
+
+/* ── Markdown text visibility ── */
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
+.stMarkdown h4, .stMarkdown h5 {
+    color: var(--text-bright) !important;
+    font-weight: 700 !important;
+}
+.stMarkdown p {
+    color: var(--text) !important;
+    line-height: 1.6;
+}
+.stMarkdown strong {
+    color: var(--text-bright) !important;
+}
+
+/* ── Radio / Checkbox labels ── */
+.stRadio > div > label,
+.stCheckbox > label {
+    color: var(--text) !important;
+    font-size: 0.86rem !important;
+}
+
+/* ── Slider styling ── */
+[data-testid="stSlider"] > div {
+    color: var(--text-sub) !important;
+}
+
+/* ── Info / Warning / Error boxes ── */
+[data-testid="stAlert"] {
+    border-radius: 10px !important;
+    font-size: 0.88rem !important;
+}
+
+/* ── Download button ── */
+.stDownloadButton > button {
+    background: var(--bg-card2) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border-vis) !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+.stDownloadButton > button:hover {
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+    box-shadow: 0 0 12px rgba(108,99,255,0.2) !important;
+}
+
+/* ── Spinner text ── */
+.stSpinner > div {
+    color: var(--text-sub) !important;
+}
+
+/* ── Caption / small text ── */
+.stCaption, [data-testid="stCaption"] {
+    color: var(--text-muted) !important;
+    font-size: 0.80rem !important;
 }
 </style>
 """
@@ -302,7 +504,7 @@ def render_sidebar_footer() -> None:
                 ticker_badges.append(f'<span class="badge badge-blue">{t} ({cnt}d)</span>')
             st.markdown(" ".join(ticker_badges), unsafe_allow_html=True)
         else:
-            st.markdown("<span style='color:#8B949E;font-size:0.8rem;'>No cached data yet.</span>", unsafe_allow_html=True)
+            st.markdown("<span style='color:#CBD5E1; font-size:0.82rem;'>No cached data yet.</span>", unsafe_allow_html=True)
 
         st.divider()
 
@@ -343,7 +545,7 @@ def render_sidebar_footer() -> None:
 
         st.divider()
         st.markdown(
-            '<div style="color:#8B949E; font-size:0.70rem; text-align:center;">'
+            '<div style="color:#A8B2D8; font-size:0.75rem; text-align:center; line-height:1.5;">'
             "Data · Yahoo Finance & SQLite<br>"
             "Models · scikit-learn<br>"
             f"AI · {st.session_state.get('gemini_model', 'gemini-flash-latest')}<br>"
